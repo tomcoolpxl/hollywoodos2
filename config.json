@@ -1,0 +1,93 @@
+{
+  "global": {
+    "theme": "classic-green",
+    "fps": 60,
+    "maintainAspectRatio": false,
+    "referenceResolution": {
+      "width": 1600,
+      "height": 900
+    }
+  },
+  "presets": {
+    "default": {
+      "windows": [
+        {
+          "id": "win_1",
+          "title": "MATRIX_UPLINK",
+          "x": 10,
+          "y": 10,
+          "width": 520,
+          "height": 435,
+          "plugin": "matrix",
+          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+        },
+        {
+          "id": "win_2",
+          "title": "GLOBAL_TRACKING",
+          "x": 540,
+          "y": 10,
+          "width": 520,
+          "height": 435,
+          "plugin": ["boot", "globe", "map"],
+          "cycleInterval": 4000,
+          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+        },
+        {
+          "id": "win_3",
+          "title": "CORE_MEMORY_DUMP",
+          "x": 1070,
+          "y": 10,
+          "width": 520,
+          "height": 435,
+          "plugin": "hex",
+          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+        },
+        {
+          "id": "win_4",
+          "title": "SIGNAL_ANALYSIS",
+          "x": 10,
+          "y": 455,
+          "width": 520,
+          "height": 435,
+          "plugin": "spectrum",
+          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+        },
+        {
+          "id": "win_5",
+          "title": "SYSTEM_LOGS",
+          "x": 540,
+          "y": 455,
+          "width": 520,
+          "height": 435,
+          "plugin": ["code", "log"],
+          "cycleInterval": 6000,
+          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+        },
+        {
+          "id": "win_6",
+          "title": "SYSTEM_LOAD",
+          "x": 1070,
+          "y": 455,
+          "width": 520,
+          "height": 435,
+          "plugin": "graph",
+          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+        }
+      ]
+    },
+    "minimal": {
+      "windows": [
+        {
+          "id": "min_1",
+          "title": "CENTRAL_CORE",
+          "x": 200,
+          "y": 100,
+          "width": 1200,
+          "height": 700,
+          "plugin": "matrix",
+          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+        }
+      ]
+    }
+  }
+}
