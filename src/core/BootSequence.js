@@ -39,7 +39,7 @@ export class BootSequence {
         // Black background
         const bg = new Graphics();
         bg.rect(0, 0, window.innerWidth, window.innerHeight);
-        bg.fill(0x000000);
+        bg.fill(0x050505);
         this.container.addChild(bg);
 
         const style = new TextStyle({

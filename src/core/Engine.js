@@ -20,9 +20,10 @@ export class Engine {
         
         await this.app.init({
             resizeTo: window,
-            backgroundColor: 0x000000,
+            backgroundColor: 0x050505, // Match HTML to prevent dimming
             antialias: true,
-            preference: 'webgl', // Force WebGL for stability
+            preference: 'webgl', 
+            powerPreference: 'default', // Avoid forcing high-performance mode
         });
 
         document.getElementById(containerId).appendChild(this.app.canvas);
