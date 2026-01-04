@@ -25,7 +25,8 @@ async function bootstrap() {
     engine.registerPlugin('boot', BootPlugin);
 
     // Load Config and Apply Default Preset
-    await engine.loadConfig('/src/config.json');
+    // In production, config.json is at the root (copied from public/)
+    await engine.loadConfig('config.json');
     engine.applyPreset('default');
 }
 
