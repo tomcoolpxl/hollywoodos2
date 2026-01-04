@@ -2,6 +2,8 @@
 
 A browser-based, modular retro-rendering platform. Simulates a multi-terminal "Hollywood-style" dashboard with deterministic animations and a cinematic boot sequence.
 
+<https://tomcoolpxl.github.io/hollywoodos2/>
+
 ## Features
 - **6 Integrated Modules:**
   - **Matrix Rain:** Upgraded with vertical trails and decoding effects.
