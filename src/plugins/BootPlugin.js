@@ -82,6 +82,9 @@ export class BootPlugin {
                     this.currentLineIdx++;
                     this.textObj.text = this.lines.join('\n');
                     this.updateCursorPos();
+                    
+                    // Keep cursor on top
+                    if (this.cursor) this.container.addChild(this.cursor.graphics);
                 } else {
                     this.state = 'waiting';
                 }

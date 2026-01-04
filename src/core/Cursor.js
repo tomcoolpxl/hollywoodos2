@@ -48,14 +48,15 @@ export class Cursor {
     draw() {
         const g = this.graphics;
         g.clear();
-        g.fill(0x00FF00); // Standard Green Cursor
+        
+        const color = 0x00FF00; // Bright Lime Green
         
         if (this.type === 'block') {
-            g.rect(0, 0, this.width, this.height);
+            g.rect(0, 0, this.width, this.height).fill(color);
         } else if (this.type === 'underline') {
-            g.rect(0, this.height - 2, this.width, 2);
+            g.rect(0, this.height - 4, this.width, 4).fill(color); // Thicker underline
         } else if (this.type === 'line') {
-            g.rect(0, 0, 2, this.height);
+            g.rect(0, 0, 2, this.height).fill(color);
         }
     }
 
