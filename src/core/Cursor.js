@@ -9,12 +9,15 @@ export class Cursor {
         this.y = 0;
         this.width = 10;
         this.height = 14;
-        this.visible = true;
+        
+        this.enabled = false; // Master switch
+        this.blinkState = true; // Visual on/off state
         this.blinkTimer = 0;
         this.blinkSpeed = 0.5; // Seconds
         this.type = 'block'; // block, line, underline
         
         this.draw();
+        this.updateVisibility();
     }
 
     setPosition(x, y) {
@@ -35,6 +38,13 @@ export class Cursor {
         this.draw();
     }
 
+    setEnabled(isEnabled) {
+        this.enabled = isEnabled;
+        this.blinkState = true; // Reset blink to "On" when enabling
+        this.blinkTimer = 0;
+        this.updateVisibility();
+    }
+
     draw() {
         const g = this.graphics;
         g.clear();
@@ -50,12 +60,21 @@ export class Cursor {
     }
 
     update(dt) {
+        if (!this.enabled) return;
+
         this.blinkTimer += dt;
         if (this.blinkTimer > this.blinkSpeed) {
             this.blinkTimer = 0;
-            this.visible = !this.visible;
-            this.graphics.alpha = this.visible ? 1 : 0;
+            this.blinkState = !this.blinkState;
+            this.updateVisibility();
         }
+    }
+
+    updateVisibility() {
+        // Visible if enabled AND in the "On" phase of blink
+        const isVisible = this.enabled && this.blinkState;
+        this.graphics.alpha = isVisible ? 1 : 0;
+        this.graphics.visible = this.enabled; // Optimization
     }
 
     destroy() {

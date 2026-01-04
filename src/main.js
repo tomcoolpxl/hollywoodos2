@@ -7,6 +7,7 @@ import { SpectrumPlugin } from './plugins/SpectrumPlugin.js';
 import { GraphPlugin } from './plugins/GraphPlugin.js';
 import { GlobePlugin } from './plugins/GlobePlugin.js';
 import { CodePlugin } from './plugins/CodePlugin.js';
+import { BootPlugin } from './plugins/BootPlugin.js';
 
 async function bootstrap() {
     const engine = new Engine();
@@ -21,6 +22,7 @@ async function bootstrap() {
     engine.registerPlugin('graph', GraphPlugin);
     engine.registerPlugin('globe', GlobePlugin);
     engine.registerPlugin('code', CodePlugin);
+    engine.registerPlugin('boot', BootPlugin);
 
     // Load Config and Apply Default Preset
     await engine.loadConfig('/src/config.json');

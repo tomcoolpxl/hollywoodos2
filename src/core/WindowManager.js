@@ -117,7 +117,7 @@ export class WindowManager {
         }
         
         // Reset Cursor
-        win.cursor.visible = false; // Hidden by default unless plugin uses it
+        if (win.cursor) win.cursor.setEnabled(false); // Disable by default
 
         // Context passed to the plugin
         const context = {

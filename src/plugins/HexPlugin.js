@@ -35,7 +35,7 @@ export class HexPlugin {
         this.generateInitialData();
 
         if (this.cursor) {
-            this.cursor.visible = true;
+            this.cursor.setEnabled(true);
             this.cursor.setType('block');
             this.cursor.setSize(8.4, 16);
         }

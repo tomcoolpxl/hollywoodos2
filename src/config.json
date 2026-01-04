@@ -28,8 +28,8 @@
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": ["globe", "map"],
-          "cycleInterval": 8000,
+          "plugin": ["boot", "globe", "map"],
+          "cycleInterval": 4000,
           "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
         },
         {
