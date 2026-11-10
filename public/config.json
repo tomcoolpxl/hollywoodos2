@@ -1,5 +1,5 @@
 {
-  "version": "2.5.0",
+  "version": "2.5.1",
   "global": {
     "seed": "HOLLYWOOD-2026",
     "theme": "classic-green",
@@ -73,7 +73,8 @@
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": "matrix"
+          "plugin": ["matrix", "boot"],
+          "cycleInterval": 7500
         },
         {
           "id": "win_2",
@@ -82,8 +83,8 @@
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": ["boot", "globe", "map", "orbit"],
-          "cycleInterval": 4500
+          "plugin": ["globe", "map", "orbit"],
+          "cycleInterval": 5500
         },
         {
           "id": "win_3",
