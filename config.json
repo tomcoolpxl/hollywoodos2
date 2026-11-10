@@ -1,5 +1,5 @@
 {
-  "version": "2.4.0",
+  "version": "2.4.1",
   "global": {
     "seed": "HOLLYWOOD-2026",
     "theme": "classic-green",
@@ -7,7 +7,7 @@
     "maintainAspectRatio": false,
     "integerScale": false,
     "crtEnabled": true,
-    "crtMode": "soft_phosphor",
+    "crtMode": "sharp_crt",
     "referenceResolution": {
       "width": 1600,
       "height": 900
