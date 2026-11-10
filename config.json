@@ -1,8 +1,9 @@
 {
-  "version": "2.4.1",
+  "version": "2.5.0",
   "global": {
     "seed": "HOLLYWOOD-2026",
     "theme": "classic-green",
+    "colorMode": "mono",
     "fps": 60,
     "maintainAspectRatio": false,
     "integerScale": false,
@@ -41,7 +42,7 @@
       "primary": "0x00FF00",
       "secondary": "0x00AA00",
       "dim": "0x003300",
-      "peak": "0x55FF55",
+      "peak": "0x66FF66",
       "bg": "0x000000",
       "error": "0xFF3300"
     },
@@ -51,15 +52,15 @@
       "dim": "0x332200",
       "peak": "0xFFE066",
       "bg": "0x050300",
-      "error": "0xFF3300"
+      "error": "0xFF4400"
     },
-    "cyber-cyan": {
-      "primary": "0x00FFFF",
-      "secondary": "0x0099AA",
-      "dim": "0x002233",
-      "peak": "0x99FFFF",
-      "bg": "0x000508",
-      "error": "0xFF3366"
+    "light-grey": {
+      "primary": "0xD4D8DC",
+      "secondary": "0x90969C",
+      "dim": "0x2E3236",
+      "peak": "0xFFFFFF",
+      "bg": "0x040506",
+      "error": "0xFF4444"
     }
   },
   "presets": {
