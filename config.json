@@ -1,11 +1,60 @@
 {
+  "version": "2.2.0",
   "global": {
+    "seed": "HOLLYWOOD-2026",
     "theme": "classic-green",
     "fps": 60,
     "maintainAspectRatio": false,
+    "integerScale": false,
+    "crtEnabled": true,
     "referenceResolution": {
       "width": 1600,
       "height": 900
+    },
+    "windowDefaults": {
+      "borderWidth": 2,
+      "bgColor": "0x000000",
+      "borderColor": "0x00FF00",
+      "titleColor": "0x00FF00",
+      "cycleInterval": 5000,
+      "speedMultiplier": 1.0
+    },
+    "pluginDefaults": {
+      "matrix": { "fontSize": 14 },
+      "log": { "fontSize": 14, "lineHeight": 16, "speed": 0.12 },
+      "hex": { "fontSize": 14, "lineHeight": 16, "speed": 0.06 },
+      "map": { "targetCount": 5, "gridSize": 40 },
+      "spectrum": { "barCount": 16, "updateRate": 0.15 },
+      "graph": { "maxPoints": 60, "updateRate": 0.1 },
+      "globe": { "lats": 12, "longs": 16, "rotationSpeed": 0.5 },
+      "code": { "fontSize": 12, "lineHeight": 14 },
+      "boot": { "fontSize": 14, "lineHeight": 18 }
+    }
+  },
+  "themes": {
+    "classic-green": {
+      "primary": "0x00FF00",
+      "secondary": "0x00AA00",
+      "dim": "0x003300",
+      "peak": "0x55FF55",
+      "bg": "0x000000",
+      "error": "0xFF3300"
+    },
+    "amber": {
+      "primary": "0xFFB000",
+      "secondary": "0xCC8800",
+      "dim": "0x332200",
+      "peak": "0xFFE066",
+      "bg": "0x050300",
+      "error": "0xFF3300"
+    },
+    "cyber-cyan": {
+      "primary": "0x00FFFF",
+      "secondary": "0x0099AA",
+      "dim": "0x002233",
+      "peak": "0x99FFFF",
+      "bg": "0x000508",
+      "error": "0xFF3366"
     }
   },
   "presets": {
@@ -18,8 +67,7 @@
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": "matrix",
-          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+          "plugin": "matrix"
         },
         {
           "id": "win_2",
@@ -29,8 +77,7 @@
           "width": 520,
           "height": 435,
           "plugin": ["boot", "globe", "map"],
-          "cycleInterval": 4000,
-          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+          "cycleInterval": 4000
         },
         {
           "id": "win_3",
@@ -39,8 +86,7 @@
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": "hex",
-          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+          "plugin": "hex"
         },
         {
           "id": "win_4",
@@ -49,8 +95,7 @@
           "y": 455,
           "width": 520,
           "height": 435,
-          "plugin": "spectrum",
-          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+          "plugin": "spectrum"
         },
         {
           "id": "win_5",
@@ -60,8 +105,7 @@
           "width": 520,
           "height": 435,
           "plugin": ["code", "log"],
-          "cycleInterval": 6000,
-          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+          "cycleInterval": 6000
         },
         {
           "id": "win_6",
@@ -70,8 +114,7 @@
           "y": 455,
           "width": 520,
           "height": 435,
-          "plugin": "graph",
-          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+          "plugin": "graph"
         }
       ]
     },
@@ -84,8 +127,90 @@
           "y": 100,
           "width": 1200,
           "height": 700,
-          "plugin": "matrix",
-          "style": { "borderColor": "0x00FF00", "titleColor": "0x00FF00" }
+          "plugin": "matrix"
+        }
+      ]
+    },
+    "debug_lab": {
+      "windows": [
+        {
+          "id": "dbg_1",
+          "title": "HEX_MEMORY_INSPECTOR",
+          "x": 10,
+          "y": 10,
+          "width": 785,
+          "height": 435,
+          "plugin": "hex"
+        },
+        {
+          "id": "dbg_2",
+          "title": "DISASSEMBLER_STREAM",
+          "x": 805,
+          "y": 10,
+          "width": 785,
+          "height": 435,
+          "plugin": "code"
+        },
+        {
+          "id": "dbg_3",
+          "title": "KERNEL_DIAGNOSTIC_LOG",
+          "x": 10,
+          "y": 455,
+          "width": 785,
+          "height": 435,
+          "plugin": "log"
+        },
+        {
+          "id": "dbg_4",
+          "title": "RESOURCE_TELEMETRY",
+          "x": 805,
+          "y": 455,
+          "width": 785,
+          "height": 435,
+          "plugin": "graph"
+        }
+      ]
+    },
+    "map_deck": {
+      "windows": [
+        {
+          "id": "tac_1",
+          "title": "GLOBAL_TACTICAL_RADAR",
+          "x": 10,
+          "y": 10,
+          "width": 1040,
+          "height": 580,
+          "plugin": "map",
+          "pluginOptions": {
+            "map": { "targetCount": 9, "gridSize": 45 }
+          }
+        },
+        {
+          "id": "tac_2",
+          "title": "ORBITAL_GEODESIC_LINK",
+          "x": 1060,
+          "y": 10,
+          "width": 530,
+          "height": 435,
+          "plugin": "globe"
+        },
+        {
+          "id": "tac_3",
+          "title": "COMMS_INTERCEPT_LOG",
+          "x": 10,
+          "y": 600,
+          "width": 1040,
+          "height": 290,
+          "plugin": "log"
+        },
+        {
+          "id": "tac_4",
+          "title": "RF_SPECTRUM_MONITOR",
+          "x": 1060,
+          "y": 455,
+          "width": 530,
+          "height": 435,
+          "plugin": "spectrum"
         }
       ]
     }
