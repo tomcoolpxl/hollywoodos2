@@ -7,6 +7,13 @@ import { CRTFilter, CRT_PRESETS } from './CRTFilter.js';
 import { createRNG } from './RNG.js';
 import { ensureBitmapFontsInstalled, createRetroText } from './Adapters.js';
 
+const ALERT_SCENARIOS = [
+    { target: 'NODE-X9 // AS4192', lat: 55.75, lon: 37.61, label: '55.8N 037.6E' },
+    { target: 'SAT-KH12 // UPLINK', lat: 39.90, lon: 116.40, label: '39.9N 116.4E' },
+    { target: 'SUB-CABLE // TAT-14', lat: 51.50, lon: -0.12, label: '51.5N 000.1W' },
+    { target: 'CORE-GW // ZURICH-04', lat: 47.37, lon: 8.54, label: '47.4N 008.5E' }
+];
+
 export class Engine {
     constructor() {
         this.app = null;
@@ -21,6 +28,18 @@ export class Engine {
         this.currentPresetName = 'default';
         this.harnessPluginName = null;
         this.errorTestActive = false;
+
+        this.systemState = {
+            alertActive: false,
+            alertChanged: false,
+            alertTimer: 0,
+            autoAlertTimer: 45,
+            alertScenarioIdx: 0,
+            alertTarget: ALERT_SCENARIOS[0].target,
+            alertCoords: { lat: ALERT_SCENARIOS[0].lat, lon: ALERT_SCENARIOS[0].lon },
+            alertCoordsLabel: ALERT_SCENARIOS[0].label,
+            layoutName: 'default'
+        };
 
         // HUD & Toast State
         this.hudContainer = null;
@@ -140,6 +159,23 @@ export class Engine {
             case 'KeyM':
                 this.toggleColorMode();
                 break;
+            case 'KeyP':
+            case 'Space':
+                e.preventDefault();
+                this.toggleCyclePause();
+                break;
+            case 'BracketLeft':
+                this.stepWindowPlugin(-1);
+                break;
+            case 'BracketRight':
+                this.stepWindowPlugin(1);
+                break;
+            case 'KeyA':
+                this.toggleSystemAlert();
+                break;
+            case 'KeyL':
+                this.cycleLayoutPreset();
+                break;
             case 'KeyE':
                 this.toggleErrorSimulation();
                 break;
@@ -158,39 +194,115 @@ export class Engine {
                     this.toggleHUD();
                 } else if (this.windowManager?.maximizedWindowId) {
                     this.windowManager.restoreMaximizedWindow();
-                    this.showToast('RESTORED TILED VIEW');
+                    this.showToast('RESTORED VIEW');
+                } else if (this.systemState.alertActive) {
+                    this.clearSystemAlert();
+                    this.showToast('PRIORITY ALERT CLEARED');
                 }
                 break;
             case 'Digit1':
                 this.harnessPluginName = null;
                 this.applyPreset('default');
-                this.showToast('PRESET: DEFAULT WORKSTATION');
+                this.showToast('LAYOUT [1]: TILED 6-WIN WORKSTATION');
                 break;
             case 'Digit2':
                 this.harnessPluginName = null;
                 this.applyPreset('minimal');
-                this.showToast('PRESET: MINIMAL MATRIX');
+                this.showToast('LAYOUT [2]: MINIMAL MATRIX CORE');
                 break;
             case 'Digit3':
                 this.harnessPluginName = null;
                 this.applyPreset('debug_lab');
-                this.showToast('PRESET: DEBUG LAB');
+                this.showToast('LAYOUT [3]: KERNEL DEBUG LAB');
                 break;
             case 'Digit4':
                 this.harnessPluginName = null;
                 this.applyPreset('map_deck');
-                this.showToast('PRESET: TACTICAL MAP DECK');
+                this.showToast('LAYOUT [4]: HERO MAP + FLOATING PIP');
                 break;
             case 'Digit5':
                 this.harnessPluginName = null;
                 this.applyPreset('cyber_ops');
-                this.showToast('PRESET: CYBER OPS DECK');
+                this.showToast('LAYOUT [5]: CYBER & SCI-FI OPS');
+                break;
+            case 'Digit6':
+                this.harnessPluginName = null;
+                this.applyPreset('workstation');
+                this.showToast('LAYOUT [6]: OVERLAPPING X11 WORKSTATION');
+                break;
+            case 'Digit7':
+                this.harnessPluginName = null;
+                this.applyPreset('crisis');
+                this.showToast('LAYOUT [7]: CINEMA CRISIS CASCADE');
                 break;
         }
     }
 
+    toggleCyclePause() {
+        if (!this.windowManager) return;
+        const paused = this.windowManager.toggleCyclePause();
+        this.showToast(paused ? 'PLUGIN CYCLING: PINNED / PAUSED' : 'PLUGIN CYCLING: AUTO-ROTATE ON');
+        if (this.hudVisible) this.renderHUD();
+    }
+
+    stepWindowPlugin(delta) {
+        if (!this.windowManager) return;
+        const targetId =
+            this.windowManager.maximizedWindowId ||
+            this.windowManager.activeWindowId ||
+            this.windowManager.windows.keys().next().value;
+        if (!targetId) return;
+        const pluginName = this.windowManager.stepWindowPlugin(targetId, delta);
+        if (pluginName) {
+            this.showToast(`WIN [${targetId.toUpperCase()}] -> ${pluginName.toUpperCase()}`);
+        }
+    }
+
+    cycleLayoutPreset() {
+        const presetOrder = ['default', 'minimal', 'debug_lab', 'map_deck', 'cyber_ops', 'workstation', 'crisis'];
+        const idx = presetOrder.indexOf(this.currentPresetName);
+        const nextPreset = presetOrder[(idx + 1) % presetOrder.length];
+        this.harnessPluginName = null;
+        this.applyPreset(nextPreset);
+        this.showToast(`LAYOUT PRESET: ${nextPreset.toUpperCase()}`);
+    }
+
+    triggerSystemAlert(duration = 16.0) {
+        const scenario = ALERT_SCENARIOS[this.systemState.alertScenarioIdx % ALERT_SCENARIOS.length];
+        this.systemState.alertScenarioIdx++;
+        this.systemState.alertActive = true;
+        this.systemState.alertChanged = true;
+        this.systemState.alertTimer = duration;
+        this.systemState.alertTarget = scenario.target;
+        this.systemState.alertCoords = { lat: scenario.lat, lon: scenario.lon };
+        this.systemState.alertCoordsLabel = scenario.label;
+
+        if (this.windowManager) {
+            this.windowManager.spawnCrisisPopups(this.systemState);
+        }
+    }
+
+    clearSystemAlert() {
+        this.systemState.alertActive = false;
+        this.systemState.alertChanged = true;
+        this.systemState.alertTimer = 0;
+        if (this.windowManager) {
+            this.windowManager.dismissCrisisPopups();
+        }
+    }
+
+    toggleSystemAlert() {
+        if (this.systemState.alertActive) {
+            this.clearSystemAlert();
+            this.showToast('PRIORITY INTERCEPT CLEARED');
+        } else {
+            this.triggerSystemAlert(18.0);
+            this.showToast(`!! PRIORITY ALERT: ${this.systemState.alertTarget} !!`);
+        }
+    }
+
     /**
-     * Parses URL query parameters (?plugin=globe&preset=map_deck&theme=amber&seed=42&crt=0&noboot=1)
+     * Parses URL query parameters (?plugin=globe&preset=map_deck&theme=amber&seed=42&crt=0&noboot=1&alert=1)
      * and launches either the Single-Plugin Test Harness or the configured workstation preset.
      */
     startFromQueryOrPreset(defaultPreset = 'default') {
@@ -227,11 +339,16 @@ export class Engine {
             this.harnessPluginName = params.get('plugin');
         }
 
+        const forceAlert = params.get('alert') === '1' || params.get('alert') === 'true';
+
         const skipBoot = params.get('noboot') === '1' || params.get('noboot') === 'true' || Boolean(this.harnessPluginName);
         if (skipBoot && params.get('boot') !== '1') {
             this.isBooting = false;
             this.windowManager.container.visible = true;
             this.activateCurrentView();
+            if (forceAlert && !this.systemState.alertActive) {
+                this.triggerSystemAlert(25.0);
+            }
             if (this.harnessPluginName) {
                 this.showToast(`DEV HARNESS: [${this.harnessPluginName.toUpperCase()}]`);
             }
@@ -251,6 +368,7 @@ export class Engine {
 
     applySinglePluginHarness(pluginName) {
         this.errorTestActive = false;
+        this.clearSystemAlert();
         const global = this.configManager.getGlobal();
         this.rng.reset(global.seed || 'HOLLYWOOD-2026');
         this.windowManager.clear();
@@ -260,9 +378,9 @@ export class Engine {
             id: 'harness_1',
             title: `TEST_HARNESS // PLUGIN: ${pluginName.toUpperCase()}`,
             x: 20,
-            y: 20,
+            y: 12,
             width: refRes.width - 40,
-            height: refRes.height - 40,
+            height: refRes.height - 32,
             plugin: pluginName
         });
 
@@ -275,6 +393,7 @@ export class Engine {
 
         this.isBooting = true;
         this.errorTestActive = false;
+        this.clearSystemAlert();
         this.windowManager.container.visible = false;
         this.hudContainer.visible = false;
 
@@ -426,13 +545,13 @@ export class Engine {
 
         const theme = this.configManager.getTheme();
         const global = this.configManager.getGlobal();
-        const boxW = 560;
-        const boxH = 380;
+        const boxW = 620;
+        const boxH = 440;
         const x = Math.max(10, Math.floor((window.innerWidth - boxW) / 2));
         const y = Math.max(10, Math.floor((window.innerHeight - boxH) / 2));
 
         const panel = new Graphics();
-        panel.rect(x, y, boxW, boxH).fill({ color: 0x030603, alpha: 0.94 });
+        panel.rect(x, y, boxW, boxH).fill({ color: 0x030603, alpha: 0.96 });
         panel.rect(x, y, boxW, boxH).stroke({ width: 2, color: theme.primary });
         panel.moveTo(x, y + 26).lineTo(x + boxW, y + 26).stroke({ width: 1, color: theme.primary });
         this.hudContainer.addChild(panel);
@@ -445,23 +564,28 @@ export class Engine {
 
         const crtLabel = this.crtFilter?.currentPreset?.label || 'SHARP CRT';
         const colorModeStr = (global.colorMode || 'mono') === 'mono' ? 'MONO (BOLD/DIM)' : 'COLOR (MULTI-TONE)';
+        const pinStr = this.windowManager?.cyclePaused ? 'PINNED (MANUAL)' : 'AUTO-ROTATE';
 
         const lines = [
-            'HOLLYWOOD_OS 2 // OPERATOR HUD & KEYMAP',
+            'HOLLYWOOD_OS 2 // OPERATOR HUD & CINEMA COMPOSITIONS',
             '',
             `ACTIVE VIEW  : ${(this.harnessPluginName ? `HARNESS (${this.harnessPluginName})` : this.currentPresetName).toUpperCase()}`,
             `PHOSPHOR     : ${(global.theme || 'classic-green').toUpperCase()} // ${colorModeStr}`,
-            `SCALING MODE : ${modeStr}`,
-            `CRT DISPLAY  : ${crtLabel}`,
-            `PRNG SEED    : ${global.seed || 'HOLLYWOOD-2026'}`,
+            `PLUGIN CYCLE : ${pinStr}   |   CRT: ${crtLabel}`,
+            `SCALING MODE : ${modeStr}  |   SEED: ${global.seed || 'HOLLYWOOD-2026'}`,
             '',
-            '[1] Default 6-Win   [2] Minimal Matrix',
-            '[3] Debug Lab       [4] Tactical Map Deck',
-            '[5] Cyber Ops Deck  [Click Win] Maximize/Restore',
-            '[T] Green/Amber/Grey[M] Toggle Mono / Color Mode',
-            '[C] Cycle 5 CRT Mode[S / I] Scaling / Integer Snap',
-            '[E] Simulate Fault  [R] System Reboot',
-            '[X] Export JSON     [O] Import JSON Config',
+            '--- LAYOUT COMPOSITIONS ---',
+            '[1] Default 6-Win Tiled   [2] Minimal Matrix Core',
+            '[3] Kernel Debug Lab      [4] Hero Map + Floating PiP',
+            '[5] Cyber & Sci-Fi Ops    [6] UNIX X11 Floating Stack',
+            '[7] Cinema Crisis Cascade [L] Cycle Layout Presets',
+            '',
+            '--- OPERATOR CONTROLS ---',
+            '[P / SPACE] Pin/Pause Cycling   [[ / ]] Step Active Plugin',
+            '[A] Trigger Priority Crisis     [Drag/Click] Move/Front Win',
+            '[T] Green / Amber / Light-Grey  [M] Toggle Mono / Color Mode',
+            '[C] Cycle 5 CRT Display Modes   [S / I] Scaling / Integer Snap',
+            '[E] Simulate Fault              [R] System Reboot',
             '[H / ? / ESC] Close HUD'
         ].join('\n');
 
@@ -565,7 +689,10 @@ export class Engine {
         if (!preset) return;
 
         this.currentPresetName = presetName;
+        this.systemState.layoutName = presetName;
         this.errorTestActive = false;
+        this.clearSystemAlert();
+
         this.rng.reset(this.configManager.getGlobal().seed || 'HOLLYWOOD-2026');
         this.windowManager.clear();
 
@@ -573,6 +700,11 @@ export class Engine {
             const resolved = this.configManager.resolveWindowConfig(winConfig, preset);
             this.windowManager.createWindow(resolved);
         });
+
+        // In Cinema Crisis Director mode, automatically trigger the staggered popup cascade
+        if (presetName === 'crisis' || preset.autoAlert) {
+            this.triggerSystemAlert(25.0);
+        }
 
         if (this.hudVisible) {
             this.renderHUD();
@@ -597,8 +729,22 @@ export class Engine {
         if (this.isBooting && this.bootSequence) {
             this.bootSequence.update(dt);
         } else {
+            // Update synchronized alert state
+            if (this.systemState.alertActive) {
+                this.systemState.alertTimer -= dt;
+                if (this.systemState.alertTimer <= 0) {
+                    if (this.currentPresetName === 'crisis') {
+                        // Re-trigger next crisis scenario in Crisis Director mode
+                        this.triggerSystemAlert(22.0);
+                    } else {
+                        this.clearSystemAlert();
+                    }
+                }
+            }
+
             this.pluginManager.update(dt);
-            this.windowManager.update(dt);
+            this.windowManager.update(dt, this.systemState);
+            this.systemState.alertChanged = false;
         }
     }
 

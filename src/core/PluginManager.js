@@ -55,7 +55,10 @@ export class PluginManager {
             const scaledDt = dt * (win?.speedMultiplier ?? 1.0);
 
             try {
-                entry.instance.update(scaledDt, { windowId });
+                entry.instance.update(scaledDt, {
+                    windowId,
+                    ...(this.engine?.systemState || {})
+                });
             } catch (e) {
                 entry.faulted = true;
                 console.error(`Runtime fault in plugin "${entry.name}" (window "${windowId}"):`, e);

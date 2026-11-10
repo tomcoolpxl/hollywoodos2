@@ -19,6 +19,9 @@ import { DecryptPlugin } from '../src/plugins/DecryptPlugin.js';
 import { ScopePlugin } from '../src/plugins/ScopePlugin.js';
 import { NetGraphPlugin } from '../src/plugins/NetGraphPlugin.js';
 import { OrbitPlugin } from '../src/plugins/OrbitPlugin.js';
+import { WaterfallPlugin } from '../src/plugins/WaterfallPlugin.js';
+import { Wireframe3DPlugin } from '../src/plugins/Wireframe3DPlugin.js';
+import { HelixPlugin } from '../src/plugins/HelixPlugin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -63,7 +66,7 @@ console.log('✓ Verified deterministic Mulberry32 RNG and .fork() reproducibili
 const rawJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'public/config.json'), 'utf8'));
 const cm = new ConfigManager();
 cm.config = structuredClone(rawJson);
-for (const presetName of ['default', 'minimal', 'debug_lab', 'map_deck', 'cyber_ops']) {
+for (const presetName of ['default', 'minimal', 'debug_lab', 'map_deck', 'cyber_ops', 'workstation', 'crisis']) {
     const preset = cm.getPreset(presetName);
     assert.ok(preset, `Preset "${presetName}" must exist`);
     for (const w of preset.windows) {
@@ -77,7 +80,7 @@ assert.equal(parsedAnsi.baseLine, 'MOUNTING DISK A: ...        [     ]');
 assert.equal(parsedAnsi.spans.length, 2);
 assert.deepEqual(parsedAnsi.spans[0], { tag: 'error', text: 'FAILED', col: 21 });
 assert.deepEqual(parsedAnsi.spans[1], { tag: 'peak', text: 'RETRY', col: 29 });
-console.log('✓ Verified all 5 presets (default, minimal, debug_lab, map_deck, cyber_ops) and Fake ANSI parser.');
+console.log('✓ Verified all 7 presets (default, minimal, debug_lab, map_deck, cyber_ops, workstation, crisis) and Fake ANSI parser.');
 
 // 4. Verify PixiJS v8 Graphics build-then-style order & determinism across plugins
 function createMockGraphics() {
@@ -177,7 +180,10 @@ const pluginClasses = [
     DecryptPlugin,
     ScopePlugin,
     NetGraphPlugin,
-    OrbitPlugin
+    OrbitPlugin,
+    WaterfallPlugin,
+    Wireframe3DPlugin,
+    HelixPlugin
 ];
 
 for (const PluginCls of pluginClasses) {
