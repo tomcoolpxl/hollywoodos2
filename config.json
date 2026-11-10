@@ -1,5 +1,5 @@
 {
-  "version": "2.5.1",
+  "version": "2.6.1",
   "global": {
     "seed": "HOLLYWOOD-2026",
     "theme": "classic-green",
@@ -16,8 +16,6 @@
     "windowDefaults": {
       "borderWidth": 2,
       "bgColor": "0x000000",
-      "borderColor": "0x00FF00",
-      "titleColor": "0x00FF00",
       "cycleInterval": 5000,
       "speedMultiplier": 1.0
     },
@@ -34,7 +32,10 @@
       "decrypt": { "fontSize": 14, "lineHeight": 18 },
       "scope": {},
       "netgraph": {},
-      "orbit": {}
+      "orbit": {},
+      "waterfall": {},
+      "cad": {},
+      "helix": {}
     }
   },
   "themes": {
@@ -68,12 +69,12 @@
       "windows": [
         {
           "id": "win_1",
-          "title": "MATRIX_UPLINK",
+          "title": "BOOT_AND_MATRIX_CORE",
           "x": 10,
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": ["matrix", "boot"],
+          "plugin": ["boot", "matrix"],
           "cycleInterval": 7500
         },
         {
@@ -88,37 +89,37 @@
         },
         {
           "id": "win_3",
-          "title": "CORE_MEMORY_DUMP",
+          "title": "MEMORY_AND_BIO_SCAN",
           "x": 1070,
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": ["hex", "decrypt"],
-          "cycleInterval": 7000
+          "plugin": ["hex", "decrypt", "helix"],
+          "cycleInterval": 6500
         },
         {
           "id": "win_4",
-          "title": "SIGNAL_ANALYSIS",
+          "title": "SIGNAL_INTERCEPT",
           "x": 10,
           "y": 455,
           "width": 520,
           "height": 435,
-          "plugin": ["spectrum", "scope"],
+          "plugin": ["spectrum", "scope", "waterfall"],
           "cycleInterval": 6000
         },
         {
           "id": "win_5",
-          "title": "SYSTEM_LOGS",
+          "title": "SYSTEM_LOGS_AND_CAD",
           "x": 540,
           "y": 455,
           "width": 520,
           "height": 435,
-          "plugin": ["code", "log"],
+          "plugin": ["code", "log", "cad"],
           "cycleInterval": 6000
         },
         {
           "id": "win_6",
-          "title": "SYSTEM_LOAD",
+          "title": "TELEMETRY_TOPOLOGY",
           "x": 1070,
           "y": 455,
           "width": 520,
@@ -185,42 +186,51 @@
       "windows": [
         {
           "id": "tac_1",
-          "title": "GLOBAL_TACTICAL_RADAR",
+          "title": "GLOBAL_STRATEGIC_RADAR // HERO_CANVAS",
           "x": 10,
           "y": 10,
-          "width": 1040,
-          "height": 580,
-          "plugin": "map",
+          "width": 1580,
+          "height": 880,
+          "plugin": ["map", "orbit"],
+          "cycleInterval": 11000,
           "pluginOptions": {
             "map": { "targetCount": 9, "gridSize": 45 }
           }
         },
         {
           "id": "tac_2",
-          "title": "ORBITAL_GEODESIC_LINK",
-          "x": 1060,
-          "y": 10,
-          "width": 530,
-          "height": 435,
-          "plugin": "globe"
+          "title": "PIP // ORBITAL_GEODESIC_LINK",
+          "x": 1095,
+          "y": 36,
+          "width": 470,
+          "height": 340,
+          "floating": true,
+          "headerStyle": "inverse",
+          "plugin": ["globe", "cad"],
+          "cycleInterval": 7500
         },
         {
           "id": "tac_3",
-          "title": "COMMS_INTERCEPT_LOG",
-          "x": 10,
-          "y": 600,
-          "width": 1040,
-          "height": 290,
-          "plugin": "log"
+          "title": "PIP // ACOUSTIC_RF_WATERFALL",
+          "x": 1095,
+          "y": 405,
+          "width": 470,
+          "height": 455,
+          "floating": true,
+          "plugin": ["waterfall", "spectrum"],
+          "cycleInterval": 8000
         },
         {
           "id": "tac_4",
-          "title": "RF_SPECTRUM_MONITOR",
-          "x": 1060,
-          "y": 455,
-          "width": 530,
-          "height": 435,
-          "plugin": "spectrum"
+          "title": "PIP // COMMS_INTERCEPT_STREAM",
+          "x": 36,
+          "y": 565,
+          "width": 680,
+          "height": 295,
+          "floating": true,
+          "headerStyle": "inverse",
+          "plugin": ["log", "decrypt"],
+          "cycleInterval": 8500
         }
       ]
     },
@@ -228,39 +238,143 @@
       "windows": [
         {
           "id": "cyb_1",
-          "title": "CRYPTO_KEY_DECRYPTOR",
+          "title": "TACTICAL_CAD_SCHEMATIC",
           "x": 10,
           "y": 10,
           "width": 785,
           "height": 435,
-          "plugin": "decrypt"
+          "plugin": ["cad", "decrypt"],
+          "cycleInterval": 8000
         },
         {
           "id": "cyb_2",
-          "title": "NETWORK_NODE_TOPOLOGY",
+          "title": "SONAR_RF_WATERFALL_ARRAY",
           "x": 805,
           "y": 10,
           "width": 785,
           "height": 435,
-          "plugin": "netgraph"
+          "plugin": ["waterfall", "netgraph"],
+          "cycleInterval": 8000
         },
         {
           "id": "cyb_3",
-          "title": "SATELLITE_GROUND_TRACK",
+          "title": "GENOMIC_MOLECULAR_LATTICE",
           "x": 10,
           "y": 455,
           "width": 785,
           "height": 435,
-          "plugin": "orbit"
+          "plugin": ["helix", "orbit"],
+          "cycleInterval": 8000
         },
         {
           "id": "cyb_4",
-          "title": "HARMONIC_PHASE_SCOPE",
+          "title": "HARMONIC_CHIRP_SCOPE",
           "x": 805,
           "y": 455,
           "width": 785,
           "height": 435,
-          "plugin": "scope"
+          "plugin": ["scope", "spectrum"],
+          "cycleInterval": 8000
+        }
+      ]
+    },
+    "workstation": {
+      "windows": [
+        {
+          "id": "ws_bg_left",
+          "title": "BG_PANE_01 // KERNEL_DISASSEMBLER",
+          "x": 10,
+          "y": 10,
+          "width": 780,
+          "height": 880,
+          "plugin": ["code", "boot"],
+          "cycleInterval": 10000
+        },
+        {
+          "id": "ws_bg_right",
+          "title": "BG_PANE_02 // GLOBAL_SURVEILLANCE_GRID",
+          "x": 800,
+          "y": 10,
+          "width": 790,
+          "height": 880,
+          "plugin": ["map", "netgraph"],
+          "cycleInterval": 10000
+        },
+        {
+          "id": "ws_flt_1",
+          "title": "X11_FLOAT // WIREFRAME_CAD_INSPECTOR",
+          "x": 150,
+          "y": 75,
+          "width": 620,
+          "height": 410,
+          "floating": true,
+          "headerStyle": "inverse",
+          "plugin": ["cad", "globe"],
+          "cycleInterval": 7500
+        },
+        {
+          "id": "ws_flt_2",
+          "title": "X11_FLOAT // GENOMIC_AND_WATERFALL_LAB",
+          "x": 640,
+          "y": 230,
+          "width": 610,
+          "height": 420,
+          "floating": true,
+          "plugin": ["helix", "waterfall"],
+          "cycleInterval": 7000
+        },
+        {
+          "id": "ws_flt_3",
+          "title": "X11_FLOAT // ROOT_SHELL_STREAM",
+          "x": 310,
+          "y": 510,
+          "width": 680,
+          "height": 340,
+          "floating": true,
+          "headerStyle": "inverse",
+          "plugin": ["decrypt", "hex", "log"],
+          "cycleInterval": 6500
+        }
+      ]
+    },
+    "crisis": {
+      "autoAlert": true,
+      "windows": [
+        {
+          "id": "crs_bg_1",
+          "title": "STRATCOM_GLOBAL_THEATER",
+          "x": 10,
+          "y": 10,
+          "width": 1030,
+          "height": 560,
+          "plugin": "map"
+        },
+        {
+          "id": "crs_bg_2",
+          "title": "ORBITAL_RECON_BUS",
+          "x": 1050,
+          "y": 10,
+          "width": 540,
+          "height": 560,
+          "plugin": "orbit"
+        },
+        {
+          "id": "crs_bg_3",
+          "title": "ACOUSTIC_WATERFALL_ARRAY",
+          "x": 10,
+          "y": 580,
+          "width": 785,
+          "height": 310,
+          "plugin": "waterfall"
+        },
+        {
+          "id": "crs_bg_4",
+          "title": "CORE_TELEMETRY_GRAPH",
+          "x": 805,
+          "y": 580,
+          "width": 785,
+          "height": 310,
+          "plugin": "graph"
         }
       ]
     }
