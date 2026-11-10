@@ -1,21 +1,22 @@
 import { Graphics } from 'pixi.js';
 
 export class Cursor {
-    constructor(container) {
+    constructor(container, color = 0x00FF00) {
         this.graphics = new Graphics();
         container.addChild(this.graphics);
-        
+
         this.x = 0;
         this.y = 0;
         this.width = 10;
         this.height = 14;
-        
-        this.enabled = false; // Master switch
-        this.blinkState = true; // Visual on/off state
+        this.color = color;
+
+        this.enabled = false;
+        this.blinkState = true;
         this.blinkTimer = 0;
-        this.blinkSpeed = 0.5; // Seconds
-        this.type = 'block'; // block, line, underline
-        
+        this.blinkSpeed = 0.5;
+        this.type = 'block'; // 'block' | 'line' | 'underline'
+
         this.draw();
         this.updateVisibility();
     }
@@ -33,6 +34,11 @@ export class Cursor {
         this.draw();
     }
 
+    setColor(color) {
+        this.color = color;
+        this.draw();
+    }
+
     setType(type) {
         this.type = type;
         this.draw();
@@ -40,7 +46,7 @@ export class Cursor {
 
     setEnabled(isEnabled) {
         this.enabled = isEnabled;
-        this.blinkState = true; // Reset blink to "On" when enabling
+        this.blinkState = true;
         this.blinkTimer = 0;
         this.updateVisibility();
     }
@@ -48,15 +54,13 @@ export class Cursor {
     draw() {
         const g = this.graphics;
         g.clear();
-        
-        const color = 0x00FF00; // Bright Lime Green
-        
+
         if (this.type === 'block') {
-            g.rect(0, 0, this.width, this.height).fill(color);
+            g.rect(0, 0, this.width, this.height).fill(this.color);
         } else if (this.type === 'underline') {
-            g.rect(0, this.height - 4, this.width, 4).fill(color); // Thicker underline
-        } else if (this.type === 'line') {
-            g.rect(0, 0, 2, this.height).fill(color);
+            g.rect(0, Math.max(0, this.height - 3), this.width, 3).fill(this.color);
+        } else if (this.type === 'line' || this.type === 'beam') {
+            g.rect(0, 0, 2, this.height).fill(this.color);
         }
     }
 
@@ -72,13 +76,14 @@ export class Cursor {
     }
 
     updateVisibility() {
-        // Visible if enabled AND in the "On" phase of blink
         const isVisible = this.enabled && this.blinkState;
         this.graphics.alpha = isVisible ? 1 : 0;
-        this.graphics.visible = this.enabled; // Optimization
+        this.graphics.visible = this.enabled;
     }
 
     destroy() {
-        this.graphics.destroy();
+        if (this.graphics && !this.graphics.destroyed) {
+            this.graphics.destroy();
+        }
     }
 }

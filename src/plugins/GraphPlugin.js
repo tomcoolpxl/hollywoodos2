@@ -1,80 +1,95 @@
-import { Graphics, Text, TextStyle, Container } from 'pixi.js';
-
 export class GraphPlugin {
     constructor() {
-        this.container = null;
+        this.adapter = null;
         this.width = 0;
         this.height = 0;
-        
-        // Two data series: CPU and RAM
+        this.rng = null;
+        this.theme = null;
+
         this.dataCPU = [];
         this.dataRAM = [];
         this.maxPoints = 60;
-        
-        this.graphics = null;
-        this.textContainer = null;
+
         this.timer = 0;
-        this.updateRate = 0.1; // Update every 100ms (10fps for data)
-        
+        this.updateRate = 0.1;
+
         this.cpuLabel = null;
         this.ramLabel = null;
     }
 
     init(context) {
-        this.container = context.container;
         this.width = context.width;
         this.height = context.height;
-        
-        this.graphics = new Graphics();
-        this.textContainer = new Container();
-        
-        this.container.addChild(this.graphics);
-        this.container.addChild(this.textContainer);
+        this.rng = context.rng;
+        this.theme = context.theme || {
+            primary: 0x00FF00,
+            secondary: 0x008800,
+            dim: 0x003300
+        };
+        this.maxPoints = context.options?.maxPoints ?? 60;
+        this.updateRate = context.options?.updateRate ?? 0.1;
 
-        // Fill initial data
+        this.adapter = context.createFreeformAdapter();
+
+        this.dataCPU = [];
+        this.dataRAM = [];
         for (let i = 0; i < this.maxPoints; i++) {
             this.dataCPU.push(0.3);
             this.dataRAM.push(0.4);
         }
 
-        // Labels
-        const style = new TextStyle({
-            fontFamily: 'monospace',
+        this.cpuLabel = this.adapter.createLabel('CPU: 30%', {
             fontSize: 12,
-            fill: '#00FF00',
+            fill: this.theme.primary,
+            x: 10,
+            y: 10
+        });
+        this.ramLabel = this.adapter.createLabel('MEM: 6.4GB', {
+            fontSize: 12,
+            fill: this.theme.secondary,
+            x: 110,
+            y: 10
         });
 
-        this.cpuLabel = new Text({ text: "CPU: 0%", style });
-        this.cpuLabel.x = 10; 
-        this.cpuLabel.y = 10;
-        
-        this.ramLabel = new Text({ text: "MEM: 0GB", style });
-        this.ramLabel.x = 100;
-        this.ramLabel.y = 10;
+        this.drawStaticGrid();
+        this.renderGraph();
+    }
 
-        this.textContainer.addChild(this.cpuLabel);
-        this.textContainer.addChild(this.ramLabel);
+    drawStaticGrid() {
+        const bg = this.adapter.bgGraphics;
+        bg.clear();
+
+        // Build grid geometry first, then stroke (PixiJS v8)
+        for (let i = 1; i < 5; i++) {
+            const y = (this.height / 5) * i;
+            bg.moveTo(0, y);
+            bg.lineTo(this.width, y);
+        }
+        for (let i = 1; i < 10; i++) {
+            const x = (this.width / 10) * i;
+            bg.moveTo(x, 0);
+            bg.lineTo(x, this.height);
+        }
+        bg.stroke({ width: 1, color: this.theme.dim });
     }
 
     update(dt) {
         this.timer += dt;
-        if (this.timer > this.updateRate) {
+        if (this.timer >= this.updateRate) {
             this.timer = 0;
             this.updateData();
+            this.renderGraph();
         }
-        this.renderGraph();
     }
 
     updateData() {
-        // CPU: Volatile
         const lastCPU = this.dataCPU[this.dataCPU.length - 1];
-        let nextCPU = lastCPU + (Math.random() - 0.5) * 0.15;
+        let nextCPU = lastCPU + (this.rng() - 0.5) * 0.15;
         nextCPU = Math.max(0.05, Math.min(0.95, nextCPU));
-        
-        // RAM: Slow moving, mostly rising then drop
+
         const lastRAM = this.dataRAM[this.dataRAM.length - 1];
-        let nextRAM = lastRAM + (Math.random() * 0.02) - 0.005; // Trend up
-        if (nextRAM > 0.9) nextRAM = 0.3; // Garbage collect
+        let nextRAM = lastRAM + this.rng() * 0.02 - 0.005;
+        if (nextRAM > 0.9) nextRAM = 0.3;
         nextRAM = Math.max(0.1, Math.min(0.95, nextRAM));
 
         this.dataCPU.push(nextCPU);
@@ -83,54 +98,39 @@ export class GraphPlugin {
         if (this.dataCPU.length > this.maxPoints) this.dataCPU.shift();
         if (this.dataRAM.length > this.maxPoints) this.dataRAM.shift();
 
-        // Update Text
         this.cpuLabel.text = `CPU: ${Math.floor(nextCPU * 100)}%`;
         this.ramLabel.text = `MEM: ${(nextRAM * 16).toFixed(1)}GB`;
     }
 
     renderGraph() {
-        const g = this.graphics;
+        const g = this.adapter.graphics;
         g.clear();
 
-        // Draw Grid
-        g.stroke({ width: 1, color: 0x003300 });
-        // Horizontal lines
-        for (let i = 1; i < 5; i++) {
-            const y = (this.height / 5) * i;
-            g.moveTo(0, y);
-            g.lineTo(this.width, y);
-        }
-        // Vertical lines (moving effect? Keep static for now to avoid jitter)
-        for (let i = 1; i < 10; i++) {
-            const x = (this.width / 10) * i;
-            g.moveTo(x, 0);
-            g.lineTo(x, this.height);
-        }
+        const stepX = this.width / Math.max(1, this.maxPoints - 1);
 
-        const stepX = this.width / (this.maxPoints - 1);
+        // 1. Build RAM path, then stroke in secondary color (PixiJS v8)
+        this.buildSeriesPath(g, this.dataRAM, stepX);
+        g.stroke({ width: 2, color: this.theme.secondary, alpha: 0.75 });
 
-        // Draw RAM (Background, Dimmer)
-        g.stroke({ width: 2, color: 0x008800, alpha: 0.7 });
-        this.drawSeries(g, this.dataRAM, stepX);
-
-        // Draw CPU (Foreground, Bright)
-        g.stroke({ width: 2, color: 0x00FF00 });
-        this.drawSeries(g, this.dataCPU, stepX);
+        // 2. Build CPU path, then stroke in primary bright color (PixiJS v8)
+        this.buildSeriesPath(g, this.dataCPU, stepX);
+        g.stroke({ width: 2, color: this.theme.primary });
     }
 
-    drawSeries(g, data, stepX) {
-        if (data.length === 0) return;
-        
-        g.moveTo(0, this.height - (data[0] * this.height));
-        
+    buildSeriesPath(g, data, stepX) {
+        if (!data || data.length === 0) return;
+
+        g.moveTo(0, this.height - data[0] * this.height);
         for (let i = 1; i < data.length; i++) {
             const x = i * stepX;
-            const y = this.height - (data[i] * this.height);
+            const y = this.height - data[i] * this.height;
             g.lineTo(x, y);
         }
     }
 
     destroy() {
-        this.container.removeChildren();
+        this.dataCPU = [];
+        this.dataRAM = [];
+        this.adapter = null;
     }
 }

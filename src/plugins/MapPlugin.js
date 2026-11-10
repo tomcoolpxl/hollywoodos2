@@ -1,126 +1,125 @@
-import { Graphics, Container, Text, TextStyle } from 'pixi.js';
-
 export class MapPlugin {
     constructor() {
-        this.container = null;
+        this.adapter = null;
         this.width = 0;
         this.height = 0;
+        this.rng = null;
+        this.theme = null;
         this.targets = [];
-        this.mapLayer = null;
-        this.uiLayer = null;
-        this.timer = 0;
         this.scanAngle = 0;
+        this.gridSize = 40;
     }
 
     init(context) {
-        console.log('MapPlugin initializing...');
-        this.container = context.container;
         this.width = context.width;
         this.height = context.height;
-        
-        this.mapLayer = new Graphics();
-        this.uiLayer = new Container();
-        this.uiGraphics = new Graphics(); // Persistent graphics for dynamic elements
-        
-        this.uiLayer.addChild(this.uiGraphics);
-        this.container.addChild(this.mapLayer);
-        this.container.addChild(this.uiLayer);
+        this.rng = context.rng;
+        this.theme = context.theme || {
+            primary: 0x00FF00,
+            secondary: 0x008800,
+            dim: 0x003300,
+            peak: 0x55FF55
+        };
+        this.gridSize = context.options?.gridSize ?? 40;
+        const targetCount = context.options?.targetCount ?? 5;
 
-        // Generate static map geometry (World Borders / Grid)
+        this.adapter = context.createFreeformAdapter();
         this.drawMapStatic();
 
-        // Generate dynamic targets
-        for (let i = 0; i < 5; i++) {
+        this.targets = [];
+        for (let i = 0; i < targetCount; i++) {
+            const id = `TRGT-${this.rng.int(1000, 9999)}`;
+            const x = this.rng.range(20, Math.max(40, this.width - 20));
+            const y = this.rng.range(20, Math.max(40, this.height - 20));
+            const label = this.adapter.createLabel(id, {
+                fontSize: 10,
+                fill: this.theme.primary,
+                x: x + 6,
+                y: y - 6
+            });
+
             this.targets.push({
-                x: Math.random() * this.width,
-                y: Math.random() * this.height,
-                vx: (Math.random() - 0.5) * 50, // Pixels per second
-                vy: (Math.random() - 0.5) * 50,
-                id: `TRGT-${Math.floor(Math.random() * 9999)}`,
-                label: null
+                x,
+                y,
+                vx: (this.rng() - 0.5) * 55,
+                vy: (this.rng() - 0.5) * 55,
+                id,
+                label
             });
         }
     }
 
     drawMapStatic() {
-        const g = this.mapLayer;
+        const g = this.adapter.bgGraphics;
         g.clear();
-        
-        // Draw Grid
-        g.stroke({ width: 1, color: 0x003300 });
-        const gridSize = 40;
-        for (let x = 0; x <= this.width; x += gridSize) {
+
+        // 1. Build background grid geometry first, then stroke (PixiJS v8)
+        for (let x = 0; x <= this.width; x += this.gridSize) {
             g.moveTo(x, 0);
             g.lineTo(x, this.height);
         }
-        for (let y = 0; y <= this.height; y += gridSize) {
+        for (let y = 0; y <= this.height; y += this.gridSize) {
             g.moveTo(0, y);
             g.lineTo(this.width, y);
         }
+        g.stroke({ width: 1, color: this.theme.dim });
 
-        // Draw "Continents" (Abstract Shapes)
-        g.stroke({ width: 2, color: 0x008800 });
-        g.moveTo(this.width * 0.2, this.height * 0.3);
-        g.lineTo(this.width * 0.4, this.height * 0.2);
-        g.lineTo(this.width * 0.5, this.height * 0.5);
-        g.lineTo(this.width * 0.3, this.height * 0.6);
+        // 2. Build wireframe continents geometry, then stroke (PixiJS v8)
+        g.moveTo(this.width * 0.16, this.height * 0.28);
+        g.lineTo(this.width * 0.38, this.height * 0.18);
+        g.lineTo(this.width * 0.48, this.height * 0.48);
+        g.lineTo(this.width * 0.28, this.height * 0.62);
         g.closePath();
 
-        g.moveTo(this.width * 0.6, this.height * 0.6);
-        g.lineTo(this.width * 0.8, this.height * 0.5);
-        g.lineTo(this.width * 0.9, this.height * 0.8);
-        g.lineTo(this.width * 0.7, this.height * 0.9);
+        g.moveTo(this.width * 0.58, this.height * 0.52);
+        g.lineTo(this.width * 0.82, this.height * 0.42);
+        g.lineTo(this.width * 0.88, this.height * 0.78);
+        g.lineTo(this.width * 0.66, this.height * 0.86);
         g.closePath();
+        g.stroke({ width: 2, color: this.theme.secondary });
     }
 
     update(dt) {
-        // Reuse the text objects? 
-        // For now, let's just clear the graphics. 
-        // Re-creating text every frame is BAD. 
-        // I will remove text update for a second to verify graphics first.
-        
-        this.uiGraphics.clear();
-        const g = this.uiGraphics;
+        const g = this.adapter.graphics;
+        g.clear();
 
-        const style = new TextStyle({
-            fontFamily: 'monospace',
-            fontSize: 10,
-            fill: '#00FF00',
-        });
-
-        // Update Targets
-        this.targets.forEach(t => {
+        // 1. Update & build all target circles + velocity vectors, then stroke (PixiJS v8)
+        for (const t of this.targets) {
             t.x += t.vx * dt;
             t.y += t.vy * dt;
 
-            // Bounce
-            if (t.x < 0 || t.x > this.width) t.vx *= -1;
-            if (t.y < 0 || t.y > this.height) t.vy *= -1;
+            if (t.x < 6) { t.x = 6; t.vx *= -1; }
+            if (t.x > this.width - 6) { t.x = this.width - 6; t.vx *= -1; }
+            if (t.y < 6) { t.y = 6; t.vy *= -1; }
+            if (t.y > this.height - 6) { t.y = this.height - 6; t.vy *= -1; }
 
-            // Draw Target
-            g.stroke({ width: 1, color: 0x00FF00 });
             g.circle(t.x, t.y, 4);
-            
-            // Draw Vector Line
             g.moveTo(t.x, t.y);
-            g.lineTo(t.x + t.vx * 0.5, t.y + t.vy * 0.5);
-        });
+            g.lineTo(t.x + t.vx * 0.45, t.y + t.vy * 0.45);
 
-        // Draw Radar Sweep
-        this.scanAngle += dt * 2; // Rads per second
+            if (t.label) {
+                t.label.x = Math.min(this.width - 62, t.x + 6);
+                t.label.y = Math.max(2, t.y - 6);
+            }
+        }
+        g.stroke({ width: 1, color: this.theme.primary });
+
+        // 2. Radar Sweep Line + Outer Ring (PixiJS v8 build-then-stroke)
+        this.scanAngle = (this.scanAngle + dt * 2.0) % (Math.PI * 2);
         const cx = this.width / 2;
         const cy = this.height / 2;
         const radius = Math.min(this.width, this.height) * 0.4;
-        
-        g.stroke({ width: 2, color: 0x00FF00, alpha: 0.5 });
+
         g.moveTo(cx, cy);
         g.lineTo(cx + Math.cos(this.scanAngle) * radius, cy + Math.sin(this.scanAngle) * radius);
-        
-        g.stroke({ width: 1, color: 0x004400 });
+        g.stroke({ width: 2, color: this.theme.peak, alpha: 0.65 });
+
         g.circle(cx, cy, radius);
+        g.stroke({ width: 1, color: this.theme.secondary, alpha: 0.8 });
     }
 
     destroy() {
-        this.container.removeChildren();
+        this.targets = [];
+        this.adapter = null;
     }
 }

@@ -2,70 +2,49 @@
 
 ## Project Overview
 
-**HollywoodOS 2** is a modular, browser-based, retro-rendering platform designed to simulate "Hollywood-style" computer interfaces (e.g., Matrix rain, scrolling log files, hex dumps). It emphasizes deterministic visual behavior, precise text control, and a clean separation between content logic (Plugins) and the rendering engine.
+**HollywoodOS 2** is a modular, browser-based, retro-rendering platform designed to simulate "Hollywood-style" computer interfaces (e.g., Matrix rain, 3D wireframe globes, tactical radar maps, scrolling logs, hex dumps, spectrum analyzers). It emphasizes deterministic visual behavior, crisp bitmap font rendering, and a clean separation between content logic (Plugins) and the rendering engine.
 
-The platform is designed to be deployed as a static site.
+The platform is deployed as a static site via Vite and GitHub Pages.
 
 ### Core Architecture
 
-*   **Engine vs. Plugins:**
-    *   **Engine:** Handles layout, rendering (PixiJS), input, time, and global effects (CRT style, scanlines).
-    *   **Plugins:** Define *what* to render (logic) but not *how*. They operate in a sandboxed manner with a specific API.
+*   **Engine vs. Plugins (Pragmatic Hybrid Adapter Pattern):**
+    *   **Engine (`src/core/`):** Handles layout, PixiJS v8 rendering, `BitmapFont` registration, `GridAdapter` & `FreeformAdapter` abstractions, seeded PRNG (`RNG.js`), hierarchical configuration (`ConfigManager.js`), window chrome/masking/error isolation (`WindowManager.js`), and global WebGL CRT post-processing (`CRTFilter.js`).
+    *   **Plugins (`src/plugins/`):** Define *what* to render using `context.createGridAdapter()`, `context.createFreeformAdapter()`, and `context.rng`. Each plugin renders into an isolated `pluginContainer` so plugin cycling never detaches window masks or the shared [`Cursor`](file:///C:/Users/thraa/github/hollywoodos2/src/core/Cursor.js).
 *   **Rendering Stack:**
-    *   **PixiJS:** Core rendering engine (WebGL/Canvas).
-    *   **GSAP:** Timing and animation management.
-    *   **Bitmap Fonts:** Used for precise, grid-based text rendering.
+    *   **PixiJS v8:** Core WebGL rendering engine, `FillGradient`, GLSL ES 300 `Filter` / `GlProgram`, and `BitmapFont` / `BitmapText`.
+    *   **GSAP:** Smooth line-step scroll animations.
 *   **Data Flow:**
-    *   Config (JSON) -> Engine -> Window Manager -> Plugin Instance.
-
-## Tech Stack
-
-*   **Language:** JavaScript (ES6+) / TypeScript (Recommended for structure).
-*   **Runtime:** Browser (Static HTML/JS).
-*   **Libraries:**
-    *   PixiJS
-    *   GSAP
-*   **Build Tooling:** *To be determined (likely Vite or Webpack)*.
+    *   `public/config.json` -> `ConfigManager` -> `Engine` -> `WindowManager` -> `PluginManager` -> Plugin Instance (`GridAdapter` / `FreeformAdapter`).
 
 ## Development Status
 
-**Current Phase:** Design & Planning.
+**Current Phase:** Active & Production-Ready.
 
-*   **`DESIGN_PLAN.md`:** Contains the comprehensive architecture, requirements, and implementation plan.
-*   **Codebase:** Not yet initialized.
-
-## Getting Started (Planned)
-
-*Since the project is in the initialization phase, standard commands are not yet established.*
-
-### Implementation Roadmap
-
-1.  **Scaffold Project:** Initialize `package.json`, set up build tool (Vite recommended).
-2.  **Core Engine:** Implement the main loop, PixiJS initialization, and Window Manager.
-3.  **Plugin System:** Define the `init/update/render/destroy` interface.
-4.  **First Plugins:** Implement "Matrix Rain" and "Fake Log" to test the engine.
-5.  **UI/UX:** Add retro CRT effects and window chrome.
+*   **Core Modules (`src/core/`):**
+    *   [`Engine.js`](file:///C:/Users/thraa/github/hollywoodos2/src/core/Engine.js): Main lifecycle, PixiJS v8 initialization, resize/scaling modes, keyboard shortcuts, focus pause.
+    *   [`WindowManager.js`](file:///C:/Users/thraa/github/hollywoodos2/src/core/WindowManager.js): Window chrome, isolated `pluginContainer` & `errorContainer`, plugin cycling, GPU resource cleanup.
+    *   [`PluginManager.js`](file:///C:/Users/thraa/github/hollywoodos2/src/core/PluginManager.js): Plugin registration, instantiation, per-window error trapping.
+    *   [`Adapters.js`](file:///C:/Users/thraa/github/hollywoodos2/src/core/Adapters.js): `HollywoodMono` `BitmapFont` installer, `GridAdapter`, and `FreeformAdapter`.
+    *   [`CRTFilter.js`](file:///C:/Users/thraa/github/hollywoodos2/src/core/CRTFilter.js): PixiJS v8 GLSL ES 300 CRT scanline, curvature, chromatic aberration, and vignette filter.
+    *   [`ConfigManager.js`](file:///C:/Users/thraa/github/hollywoodos2/src/core/ConfigManager.js): Hierarchical config & theme resolution, versioned `localStorage` persistence.
+    *   [`RNG.js`](file:///C:/Users/thraa/github/hollywoodos2/src/core/RNG.js): Deterministic Mulberry32 PRNG with `.fork()`, `.int()`, `.range()`, and `.pick()`.
+    *   [`Cursor.js`](file:///C:/Users/thraa/github/hollywoodos2/src/core/Cursor.js) & [`BootSequence.js`](file:///C:/Users/thraa/github/hollywoodos2/src/core/BootSequence.js).
+*   **Plugins (`src/plugins/`):**
+    *   `MatrixPlugin`, `BootPlugin`, `GlobePlugin`, `MapPlugin`, `HexPlugin`, `SpectrumPlugin`, `CodePlugin`, `LogPlugin`, `GraphPlugin`.
 
 ## Architecture & Conventions
 
 ### Plugin API
-Plugins must adhere to the following lifecycle:
+Plugins adhere to the following lifecycle:
 ```javascript
-init(context)       // Setup resources, receive grid/font info, RNG handle
-update(dt, state)   // Advance logic step
-render(adapter)     // Issue abstract drawing commands
-destroy()           // Cleanup
+init(context)       // Receive adapters, dimensions, theme, cursor, and seeded context.rng
+update(dt, state)   // Advance simulation logic and update adapters
+destroy()           // Clean up internal state; WindowManager destroys child display objects
 ```
 
-### Configuration
-*   **Format:** JSON.
-*   **Structure:** Hierarchical (Global -> Screen -> Window -> Plugin).
-*   **Styles:** Separated from logic; visual themes are applied by the engine.
-
 ### Determinism
-*   **RNG:** Use a global seeded RNG. **Do not** use `Math.random()` directly in plugins.
+*   **RNG:** Always use `context.rng()` (and helpers `context.rng.int()`, `context.rng.pick()`, `context.rng.range()`). **Never** use `Math.random()` in plugins.
 
-### Rendering
-*   **Grid Mode:** 80x25 or 40x24 character grids.
-*   **Free-Form:** 2D primitives/overlays.
-*   **Coordinate System:** Local to the window (0,0 is top-left of the specific window/plugin).
+### PixiJS v8 Graphics Convention
+*   Always define geometry first (`.rect()`, `.circle()`, `.moveTo()`/`.lineTo()`) and call `.fill()` or `.stroke()` **after** the geometry definition, or use `FreeformAdapter` methods.

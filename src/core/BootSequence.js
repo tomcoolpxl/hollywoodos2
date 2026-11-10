@@ -1,84 +1,90 @@
-import { Container, Text, TextStyle, Graphics } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
+import { createRetroText } from './Adapters.js';
 
 export class BootSequence {
-    constructor(app, onComplete) {
+    constructor(app, onComplete, themeColor = 0x00FF00) {
         this.app = app;
         this.onComplete = onComplete;
+        this.themeColor = themeColor;
         this.container = new Container();
         this.app.stage.addChild(this.container);
-        
+
+        this.bg = null;
         this.lines = [];
         this.textObj = null;
         this.timer = 0;
         this.step = 0;
-        
+
         this.bootLog = [
-            "HOLLYWOOD BIOS v2.0",
-            "COPYRIGHT (C) 1999-2026",
-            "",
-            "CPU: QUANTUM CORE i9 @ 9.9GHz",
-            "MEM: 64TB OK",
-            "",
-            "INITIALIZING GRAPHICS ADAPTER...",
-            " OK",
-            "LOADING KERNEL...",
-            " [....................] 100%",
-            "MOUNTING FILE SYSTEMS...",
-            " /ROOT: READ-ONLY",
-            " /USR: MOUNTED",
-            " /NET: CONNECTED (SECURE)",
-            "",
-            "STARTING HOLLYWOOD_OS SESSION MANAGER...",
-            "ACCESS GRANTED."
+            'HOLLYWOOD BIOS v2.1',
+            'COPYRIGHT (C) 1999-2026',
+            '',
+            'CPU: QUANTUM CORE i9 @ 9.9GHz',
+            'MEM: 64TB ECC OK',
+            '',
+            'INITIALIZING GRAPHICS ADAPTER...',
+            ' OK',
+            'LOADING KERNEL...',
+            ' [####################] 100%',
+            'MOUNTING FILE SYSTEMS...',
+            ' /ROOT: READ-ONLY',
+            ' /USR: MOUNTED',
+            ' /NET: CONNECTED (SECURE)',
+            '',
+            'STARTING HOLLYWOOD_OS SESSION MANAGER...',
+            'ACCESS GRANTED.'
         ];
 
         this.init();
     }
 
     init() {
-        // Black background
-        const bg = new Graphics();
-        bg.rect(0, 0, window.innerWidth, window.innerHeight);
-        bg.fill(0x050505);
-        this.container.addChild(bg);
+        this.bg = new Graphics();
+        this.drawBackground(window.innerWidth, window.innerHeight);
+        this.container.addChild(this.bg);
 
-        const style = new TextStyle({
-            fontFamily: 'monospace',
+        this.textObj = createRetroText('', {
             fontSize: 16,
-            fill: '#00FF00',
-            lineHeight: 20
+            lineHeight: 20,
+            fill: this.themeColor
         });
-
-        this.textObj = new Text({ text: '', style });
         this.textObj.x = 20;
         this.textObj.y = 20;
         this.container.addChild(this.textObj);
     }
 
+    drawBackground(w, h) {
+        if (!this.bg) return;
+        this.bg.clear();
+        this.bg.rect(0, 0, Math.max(1, w), Math.max(1, h)).fill(0x050505);
+    }
+
     update(dt) {
         this.timer += dt;
 
-        // Typing speed varies
-        if (this.timer > 0.1 && this.step < this.bootLog.length) {
+        if (this.timer > 0.08 && this.step < this.bootLog.length) {
             this.timer = 0;
             this.lines.push(this.bootLog[this.step]);
             this.textObj.text = this.lines.join('\n');
             this.step++;
         }
 
-        // End of sequence
-        if (this.step >= this.bootLog.length && this.timer > 1.0) {
+        if (this.step >= this.bootLog.length && this.timer > 0.75) {
             this.destroy();
-            this.onComplete();
+            if (typeof this.onComplete === 'function') {
+                this.onComplete();
+            }
         }
     }
 
     resize(w, h) {
-        // Re-draw background if needed, or ignore for short boot
+        this.drawBackground(w, h);
     }
 
     destroy() {
-        this.app.stage.removeChild(this.container);
-        this.container.destroy({ children: true });
+        if (this.container && !this.container.destroyed) {
+            this.app.stage.removeChild(this.container);
+            this.container.destroy({ children: true });
+        }
     }
 }

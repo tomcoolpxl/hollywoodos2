@@ -1,63 +1,51 @@
-import { Text, TextStyle } from 'pixi.js';
-
 export class HexPlugin {
     constructor() {
-        this.container = null;
-        this.width = 0;
-        this.height = 0;
-        this.fontSize = 14;
+        this.adapter = null;
+        this.rng = null;
         this.lines = [];
-        this.textObject = null;
-        this.startOffset = 0x1000;
+        this.nextOffset = 0x1000;
         this.rows = 0;
-        this.speed = 0.05;
+        this.speed = 0.06;
         this.timer = 0;
-        this.cursor = null;
     }
 
     init(context) {
-        this.container = context.container;
-        this.width = context.width;
-        this.height = context.height;
-        this.cursor = context.cursor;
+        this.rng = context.rng;
+        const fontSize = context.options?.fontSize ?? 14;
+        const lineHeight = context.options?.lineHeight ?? 16;
+        this.speed = context.options?.speed ?? 0.06;
 
-        const style = new TextStyle({
-            fontFamily: 'monospace',
-            fontSize: this.fontSize,
-            fill: '#00FF00',
-            lineHeight: 16
+        this.adapter = context.createGridAdapter({
+            fontSize,
+            lineHeight,
+            color: context.theme?.primary ?? 0x00FF00
         });
-
-        this.rows = Math.floor(this.height / 16);
-        this.textObject = new Text({ text: '', style });
-        this.container.addChild(this.textObject);
+        this.rows = this.adapter.rows;
+        this.nextOffset = 0x1000;
 
         this.generateInitialData();
-
-        if (this.cursor) {
-            this.cursor.setEnabled(true);
-            this.cursor.setType('block');
-            this.cursor.setSize(8.4, 16);
-        }
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
+        this.adapter.setCursorGrid(10, 0);
     }
 
     generateInitialData() {
         this.lines = [];
         for (let i = 0; i < this.rows; i++) {
-            this.lines.push(this.generateLine(this.startOffset + (i * 16)));
+            this.lines.push(this.generateLine(this.nextOffset));
+            this.nextOffset += 16;
         }
-        this.render();
+        this.adapter.setLines(this.lines, false);
     }
 
     generateLine(offset) {
-        const hexOffset = offset.toString(16).toUpperCase().padStart(8, '0');
+        const hexOffset = (offset >>> 0).toString(16).toUpperCase().padStart(8, '0');
         let hexBytes = '';
         let ascii = '';
-        
-        for (let j = 0; j < 8; j++) { 
-            const val = Math.floor(Math.random() * 256);
+
+        for (let j = 0; j < 8; j++) {
+            const val = this.rng.int(0, 255);
             hexBytes += val.toString(16).toUpperCase().padStart(2, '0') + ' ';
-            ascii += (val > 32 && val < 127) ? String.fromCharCode(val) : '.';
+            ascii += val > 32 && val < 127 ? String.fromCharCode(val) : '.';
         }
 
         return `${hexOffset}  ${hexBytes} |${ascii}|`;
@@ -65,34 +53,28 @@ export class HexPlugin {
 
     update(dt) {
         this.timer += dt;
-        if (this.timer > this.speed) {
+        if (this.timer >= this.speed) {
             this.timer = 0;
-            this.lines.shift();
-            // Safeguard against empty lines array
-            let lastOffset = this.startOffset;
-            if (this.lines.length > 0) {
-                 const parts = this.lines[this.lines.length - 1].split(' ');
-                 if (parts.length > 0) lastOffset = parseInt(parts[0], 16);
+            if (this.lines.length >= this.rows) {
+                this.lines.shift();
             }
-            this.lines.push(this.generateLine(lastOffset + 16));
-            this.render();
+            this.lines.push(this.generateLine(this.nextOffset));
+            this.nextOffset = (this.nextOffset + 16) & 0xFFFFFFFF;
+            this.adapter.setLines(this.lines, false);
         }
 
-        if (this.cursor && Math.random() > 0.9) {
-            // Move cursor mostly in hex area
-            // 10 chars offset, 24 chars hex
-            const r = Math.floor(Math.random() * this.rows);
-            const c = 10 + Math.floor(Math.random() * 24); 
-            // 8.4 is approx width of monospace 14px char (0.6 * 14)
-            this.cursor.setPosition(c * 8.4, r * 16);
+        if (this.rng() > 0.88) {
+            const r = this.rng.int(0, Math.max(0, this.rows - 1));
+            const c = 10 + this.rng.int(0, 23);
+            this.adapter.setCursorGrid(c, r);
         }
-    }
-
-    render() {
-        this.textObject.text = this.lines.join('\n');
     }
 
     destroy() {
-        this.container.removeChildren();
+        if (this.adapter) {
+            this.adapter.destroy();
+            this.adapter = null;
+        }
+        this.lines = [];
     }
 }

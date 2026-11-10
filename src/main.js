@@ -24,10 +24,9 @@ async function bootstrap() {
     engine.registerPlugin('code', CodePlugin);
     engine.registerPlugin('boot', BootPlugin);
 
-    // Load Config and Apply Default Preset
-    // In production, config.json is at the root (copied from public/)
+    // Load Config and Launch Preset or URL Test Harness (?plugin=globe&theme=amber&seed=42)
     await engine.loadConfig('config.json');
-    engine.applyPreset('default');
+    engine.startFromQueryOrPreset('default');
 }
 
 bootstrap();

@@ -1,110 +1,120 @@
-import { Text, TextStyle, Container } from 'pixi.js';
+import { Text, TextStyle, FillGradient } from 'pixi.js';
+import { getMonoCharWidth } from '../core/Adapters.js';
 
 export class MatrixPlugin {
     constructor() {
         this.container = null;
         this.width = 0;
         this.height = 0;
+        this.rng = null;
+        this.theme = null;
         this.fontSize = 14;
-        this.charWidth = 0;
-        this.cols = []; // Array of Column objects
+        this.charWidth = 8.4;
+        this.cols = [];
+        this.sharedStyle = null;
     }
 
     init(context) {
         this.container = context.container;
         this.width = context.width;
         this.height = context.height;
-        
-        // 1. Measure Font
-        const tempStyle = new TextStyle({ fontFamily: 'monospace', fontSize: this.fontSize });
-        const tempText = new Text({ text: 'M', style: tempStyle });
-        this.charWidth = tempText.width;
-        tempText.destroy();
+        this.rng = context.rng;
+        this.theme = context.theme || {
+            primary: 0x00FF00,
+            secondary: 0x00AA00,
+            dim: 0x003300,
+            peak: 0x55FF55
+        };
+        this.fontSize = context.options?.fontSize ?? 14;
+        this.charWidth = getMonoCharWidth(this.fontSize);
 
-        // 2. Setup Columns
-        const colCount = Math.floor(this.width / this.charWidth);
-        
+        // PixiJS v8 FillGradient: dim tail at top (0.0) -> primary body (0.7) -> bright white head at bottom (1.0)
+        const gradient = new FillGradient({
+            type: 'linear',
+            start: { x: 0, y: 0 },
+            end: { x: 0, y: 1 },
+            stops: [
+                { offset: 0.0, color: this.theme.dim },
+                { offset: 0.72, color: this.theme.primary },
+                { offset: 1.0, color: 0xFFFFFF }
+            ]
+        });
+
+        this.sharedStyle = new TextStyle({
+            fontFamily: 'Consolas, "Courier New", monospace',
+            fontSize: this.fontSize,
+            fill: gradient,
+            lineHeight: this.fontSize
+        });
+
+        const colCount = Math.max(1, Math.floor(this.width / this.charWidth));
         for (let i = 0; i < colCount; i++) {
             this.createColumn(i);
         }
     }
 
     createColumn(index) {
-        // Random properties
-        const speed = 100 + Math.random() * 200; // Pixels per second
-        const trailLength = 5 + Math.floor(Math.random() * 15); // 5 to 20 chars
-        
-        // Generate initial string
-        let content = "";
+        const speed = 100 + this.rng() * 200;
+        const trailLength = this.rng.int(5, 19);
+
+        const contentArr = [];
         for (let j = 0; j < trailLength; j++) {
-            content += this.getRandomChar() + "\n";
+            contentArr.push(this.getRandomChar());
         }
 
-        // Style with Gradient (Head=White, Body=Green, Tail=Dark)
-        const style = new TextStyle({
-            fontFamily: 'monospace',
-            fontSize: this.fontSize,
-            fill: ['#ffffff', '#00ff00', '#003300'], // Gradient
-            fillGradientType: 1, // Linear Vertical
-            fillGradientStops: [0, 0.3, 1], // White at top, Green mid, Dark bottom
-            lineHeight: this.fontSize, // Compact
+        const textObj = new Text({
+            text: contentArr.join('\n'),
+            style: this.sharedStyle
         });
-
-        const textObj = new Text({ text: content, style });
         textObj.x = index * this.charWidth;
-        // Start randomly placed or above screen
-        textObj.y = Math.random() * this.height * 1.5 - this.height; 
+        textObj.y = this.rng() * this.height * 1.5 - this.height;
 
         this.container.addChild(textObj);
 
         this.cols.push({
             obj: textObj,
-            speed: speed,
-            trailLength: trailLength,
-            flickerTimer: Math.random(),
-            contentArr: content.split('\n') // Keep array for easy editing
+            speed,
+            trailLength,
+            flickerTimer: this.rng() * 0.1,
+            contentArr
         });
     }
 
     getRandomChar() {
-        // Half-width Katakana + Latin + Numbers
-        if (Math.random() > 0.5) {
-            return String.fromCharCode(0x30A0 + Math.random() * 96);
-        } else {
-            return String.fromCharCode(0x21 + Math.random() * 93);
+        if (this.rng() > 0.5) {
+            return String.fromCharCode(0x30A0 + this.rng.int(0, 95));
         }
+        return String.fromCharCode(0x21 + this.rng.int(0, 92));
     }
 
     update(dt) {
         const resetThreshold = this.height + 50;
 
         for (const col of this.cols) {
-            // 1. Move
             col.obj.y += col.speed * dt;
 
-            // 2. Reset if off screen
             if (col.obj.y > resetThreshold) {
-                col.obj.y = -(col.trailLength * this.fontSize) - (Math.random() * 200);
-                col.speed = 100 + Math.random() * 200;
+                col.obj.y = -(col.trailLength * this.fontSize) - this.rng() * 200;
+                col.speed = 100 + this.rng() * 200;
             }
 
-            // 3. Flicker (Change one character randomly)
             col.flickerTimer += dt;
-            if (col.flickerTimer > 0.1) { // Throttle updates
+            if (col.flickerTimer >= 0.1) {
                 col.flickerTimer = 0;
-                
-                // Change a random character in the trail
-                const idx = Math.floor(Math.random() * col.trailLength);
+                const idx = this.rng.int(0, col.trailLength - 1);
                 col.contentArr[idx] = this.getRandomChar();
-                
-                // Update text texture
                 col.obj.text = col.contentArr.join('\n');
             }
         }
     }
 
     destroy() {
-        this.container.removeChildren();
+        for (const col of this.cols) {
+            if (col.obj && !col.obj.destroyed) {
+                col.obj.destroy();
+            }
+        }
         this.cols = [];
+        this.sharedStyle = null;
     }
 }
