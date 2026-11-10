@@ -1,5 +1,5 @@
 {
-  "version": "2.6.1",
+  "version": "2.7.0",
   "global": {
     "seed": "HOLLYWOOD-2026",
     "theme": "classic-green",
@@ -35,7 +35,13 @@
       "orbit": {},
       "waterfall": {},
       "cad": {},
-      "helix": {}
+      "helix": {},
+      "filesys": { "fontSize": 13, "lineHeight": 16 },
+      "trajectory": {},
+      "shell": { "fontSize": 13, "lineHeight": 16 },
+      "top": { "fontSize": 13, "lineHeight": 16 },
+      "dossier": { "fontSize": 13, "lineHeight": 16 },
+      "pcap": { "fontSize": 12, "lineHeight": 15 }
     }
   },
   "themes": {
@@ -69,47 +75,47 @@
       "windows": [
         {
           "id": "win_1",
-          "title": "BOOT_AND_MATRIX_CORE",
+          "title": "BOOT_AND_ROOT_SHELL",
           "x": 10,
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": ["boot", "matrix"],
-          "cycleInterval": 7500
+          "plugin": ["boot", "shell", "matrix", "filesys"],
+          "cycleInterval": 7000
         },
         {
           "id": "win_2",
-          "title": "GLOBAL_TRACKING",
+          "title": "GLOBAL_AND_TRAJECTORY",
           "x": 540,
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": ["globe", "map", "orbit"],
-          "cycleInterval": 5500
+          "plugin": ["globe", "trajectory", "map", "orbit"],
+          "cycleInterval": 6000
         },
         {
           "id": "win_3",
-          "title": "MEMORY_AND_BIO_SCAN",
+          "title": "DOSSIER_AND_MEMORY_VAULT",
           "x": 1070,
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": ["hex", "decrypt", "helix"],
+          "plugin": ["dossier", "hex", "decrypt", "helix"],
           "cycleInterval": 6500
         },
         {
           "id": "win_4",
-          "title": "SIGNAL_INTERCEPT",
+          "title": "SIGNAL_AND_PACKET_SNIFFER",
           "x": 10,
           "y": 455,
           "width": 520,
           "height": 435,
-          "plugin": ["spectrum", "scope", "waterfall"],
+          "plugin": ["pcap", "spectrum", "scope", "waterfall"],
           "cycleInterval": 6000
         },
         {
           "id": "win_5",
-          "title": "SYSTEM_LOGS_AND_CAD",
+          "title": "KERNEL_CODE_AND_LOGS",
           "x": 540,
           "y": 455,
           "width": 520,
@@ -119,13 +125,82 @@
         },
         {
           "id": "win_6",
-          "title": "TELEMETRY_TOPOLOGY",
+          "title": "PROCESS_TABLE_AND_LOAD",
           "x": 1070,
           "y": 455,
           "width": 520,
           "height": 435,
-          "plugin": ["graph", "netgraph"],
+          "plugin": ["top", "graph", "netgraph"],
           "cycleInterval": 6500
+        }
+      ]
+    },
+    "demo_2": {
+      "windows": [
+        {
+          "id": "d2_bg_left",
+          "title": "MAINFRAME_PROCESS_AND_KERNEL_TABLE",
+          "x": 10,
+          "y": 10,
+          "width": 650,
+          "height": 880,
+          "plugin": ["top", "code", "boot"],
+          "cycleInterval": 8500
+        },
+        {
+          "id": "d2_bg_top_right",
+          "title": "BALLISTIC_TRAJECTORY_AND_GLOBAL_TRACK",
+          "x": 670,
+          "y": 10,
+          "width": 920,
+          "height": 435,
+          "plugin": ["trajectory", "map", "orbit", "globe"],
+          "cycleInterval": 8000
+        },
+        {
+          "id": "d2_bg_bot_right",
+          "title": "PACKET_DISSECTOR_AND_WATERFALL",
+          "x": 670,
+          "y": 455,
+          "width": 920,
+          "height": 435,
+          "plugin": ["pcap", "waterfall", "spectrum", "scope"],
+          "cycleInterval": 7500
+        },
+        {
+          "id": "d2_flt_shell",
+          "title": "TTY_0 // GHOST_OPERATOR_EXPLOIT_SHELL",
+          "x": 65,
+          "y": 65,
+          "width": 660,
+          "height": 360,
+          "floating": true,
+          "headerStyle": "inverse",
+          "plugin": ["shell", "log", "matrix"],
+          "cycleInterval": 7500
+        },
+        {
+          "id": "d2_flt_dossier",
+          "title": "INTEL_DB // CLASSIFIED_ASSET_DOSSIER",
+          "x": 855,
+          "y": 135,
+          "width": 700,
+          "height": 395,
+          "floating": true,
+          "plugin": ["dossier", "decrypt", "helix"],
+          "cycleInterval": 7000
+        },
+        {
+          "id": "d2_flt_files",
+          "title": "VAULT_COMMANDER // DUAL_PANE_EXFIL_MATRIX",
+          "x": 195,
+          "y": 465,
+          "width": 730,
+          "height": 405,
+          "floating": true,
+          "headerStyle": "inverse",
+          "plugin": ["filesys", "hex", "cad", "netgraph", "graph"],
+          "cycleInterval": 7000
         }
       ]
     },
@@ -151,7 +226,7 @@
           "y": 10,
           "width": 785,
           "height": 435,
-          "plugin": "hex"
+          "plugin": ["hex", "pcap"]
         },
         {
           "id": "dbg_2",
@@ -160,7 +235,7 @@
           "y": 10,
           "width": 785,
           "height": 435,
-          "plugin": "code"
+          "plugin": ["code", "shell"]
         },
         {
           "id": "dbg_3",
@@ -169,16 +244,16 @@
           "y": 455,
           "width": 785,
           "height": 435,
-          "plugin": "log"
+          "plugin": ["log", "filesys"]
         },
         {
           "id": "dbg_4",
-          "title": "RESOURCE_TELEMETRY",
+          "title": "PROCESS_AND_RESOURCE_TABLE",
           "x": 805,
           "y": 455,
           "width": 785,
           "height": 435,
-          "plugin": "graph"
+          "plugin": ["top", "graph"]
         }
       ]
     },
@@ -199,14 +274,14 @@
         },
         {
           "id": "tac_2",
-          "title": "PIP // ORBITAL_GEODESIC_LINK",
+          "title": "PIP // ORBITAL_AND_TRAJECTORY_LINK",
           "x": 1095,
           "y": 36,
           "width": 470,
           "height": 340,
           "floating": true,
           "headerStyle": "inverse",
-          "plugin": ["globe", "cad"],
+          "plugin": ["trajectory", "globe", "cad"],
           "cycleInterval": 7500
         },
         {
@@ -222,14 +297,14 @@
         },
         {
           "id": "tac_4",
-          "title": "PIP // COMMS_INTERCEPT_STREAM",
+          "title": "PIP // LIVE_SHELL_AND_COMMS_INTERCEPT",
           "x": 36,
-          "y": 565,
-          "width": 680,
-          "height": 295,
+          "y": 555,
+          "width": 690,
+          "height": 305,
           "floating": true,
           "headerStyle": "inverse",
-          "plugin": ["log", "decrypt"],
+          "plugin": ["shell", "log", "dossier"],
           "cycleInterval": 8500
         }
       ]
@@ -243,7 +318,7 @@
           "y": 10,
           "width": 785,
           "height": 435,
-          "plugin": ["cad", "decrypt"],
+          "plugin": ["cad", "trajectory"],
           "cycleInterval": 8000
         },
         {
@@ -263,7 +338,7 @@
           "y": 455,
           "width": 785,
           "height": 435,
-          "plugin": ["helix", "orbit"],
+          "plugin": ["helix", "dossier"],
           "cycleInterval": 8000
         },
         {
@@ -282,12 +357,12 @@
       "windows": [
         {
           "id": "ws_bg_left",
-          "title": "BG_PANE_01 // KERNEL_DISASSEMBLER",
+          "title": "BG_PANE_01 // KERNEL_PROCESS_AND_CODE",
           "x": 10,
           "y": 10,
           "width": 780,
           "height": 880,
-          "plugin": ["code", "boot"],
+          "plugin": ["top", "code", "boot"],
           "cycleInterval": 10000
         },
         {
@@ -297,42 +372,42 @@
           "y": 10,
           "width": 790,
           "height": 880,
-          "plugin": ["map", "netgraph"],
+          "plugin": ["map", "trajectory", "netgraph"],
           "cycleInterval": 10000
         },
         {
           "id": "ws_flt_1",
-          "title": "X11_FLOAT // WIREFRAME_CAD_INSPECTOR",
-          "x": 150,
-          "y": 75,
-          "width": 620,
-          "height": 410,
+          "title": "X11_FLOAT // VAULT_FILE_COMMANDER",
+          "x": 140,
+          "y": 70,
+          "width": 650,
+          "height": 400,
           "floating": true,
           "headerStyle": "inverse",
-          "plugin": ["cad", "globe"],
+          "plugin": ["filesys", "cad"],
           "cycleInterval": 7500
         },
         {
           "id": "ws_flt_2",
-          "title": "X11_FLOAT // GENOMIC_AND_WATERFALL_LAB",
-          "x": 640,
-          "y": 230,
-          "width": 610,
-          "height": 420,
+          "title": "X11_FLOAT // PACKET_DISSECTOR_AND_DOSSIER",
+          "x": 650,
+          "y": 225,
+          "width": 670,
+          "height": 410,
           "floating": true,
-          "plugin": ["helix", "waterfall"],
+          "plugin": ["pcap", "dossier", "helix"],
           "cycleInterval": 7000
         },
         {
           "id": "ws_flt_3",
-          "title": "X11_FLOAT // ROOT_SHELL_STREAM",
-          "x": 310,
-          "y": 510,
+          "title": "X11_FLOAT // GHOST_OPERATOR_ROOT_SHELL",
+          "x": 280,
+          "y": 505,
           "width": 680,
-          "height": 340,
+          "height": 345,
           "floating": true,
           "headerStyle": "inverse",
-          "plugin": ["decrypt", "hex", "log"],
+          "plugin": ["shell", "decrypt", "hex"],
           "cycleInterval": 6500
         }
       ]
@@ -351,30 +426,30 @@
         },
         {
           "id": "crs_bg_2",
-          "title": "ORBITAL_RECON_BUS",
+          "title": "BALLISTIC_ASCENT_CORRIDOR",
           "x": 1050,
           "y": 10,
           "width": 540,
           "height": 560,
-          "plugin": "orbit"
+          "plugin": "trajectory"
         },
         {
           "id": "crs_bg_3",
-          "title": "ACOUSTIC_WATERFALL_ARRAY",
+          "title": "LIVE_PACKET_DISSECTOR",
           "x": 10,
           "y": 580,
           "width": 785,
           "height": 310,
-          "plugin": "waterfall"
+          "plugin": "pcap"
         },
         {
           "id": "crs_bg_4",
-          "title": "CORE_TELEMETRY_GRAPH",
+          "title": "MAINFRAME_PROCESS_MONITOR",
           "x": 805,
           "y": 580,
           "width": 785,
           "height": 310,
-          "plugin": "graph"
+          "plugin": "top"
         }
       ]
     }

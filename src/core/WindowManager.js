@@ -3,6 +3,31 @@ import { gsap } from 'gsap';
 import { Cursor } from './Cursor.js';
 import { createRetroText, GridAdapter, FreeformAdapter } from './Adapters.js';
 
+const PLUGIN_TITLES = {
+    boot: 'SYSTEM_POST_AND_BOOT_SEQUENCE',
+    matrix: 'MATRIX_CIPHER_DATA_UPLINK',
+    globe: 'ORBITAL_GEODESIC_GLOBE_SCAN',
+    map: 'GLOBAL_STRATEGIC_RADAR_THEATER',
+    orbit: 'SATELLITE_EPHEMERIS_GROUND_TRACK',
+    trajectory: 'BALLISTIC_ASCENT_TRAJECTORY',
+    hex: 'RAW_MEMORY_HEX_INSPECTOR',
+    decrypt: 'BRUTE_FORCE_KEY_DECRYPTOR',
+    helix: 'GENOMIC_MOLECULAR_LATTICE_SCAN',
+    dossier: 'CLASSIFIED_INTEL_DOSSIER_DB',
+    spectrum: 'RF_SIGINT_SPECTRUM_ANALYZER',
+    scope: 'CHIRP_BURST_PHASE_OSCILLOSCOPE',
+    waterfall: 'SOSUS_ACOUSTIC_RF_WATERFALL',
+    pcap: 'LIVE_PACKET_PROTOCOL_DISSECTOR',
+    code: 'RING0_KERNEL_DISASSEMBLER',
+    log: 'SECURITY_AUDIT_INTERCEPT_LOG',
+    cad: '3D_WIREFRAME_CAD_SCHEMATIC',
+    shell: 'GHOST_OPERATOR_ROOT_SHELL',
+    filesys: 'DUAL_PANE_VAULT_COMMANDER',
+    top: 'MAINFRAME_PROCESS_AND_THREAD_TABLE',
+    graph: 'MULTI_CORE_RESOURCE_TELEMETRY',
+    netgraph: 'AUTONOMOUS_MESH_NODE_TOPOLOGY'
+};
+
 export function destroyContainerChildren(container) {
     if (!container || container.destroyed) return;
     const children = container.removeChildren();
@@ -168,7 +193,13 @@ export class WindowManager {
         const cs = String(Math.floor((this.simMissionClock % 1) * 100)).padStart(2, '0');
 
         this.statusLeft.text = `HOLLYWOOD_OS v2.6 // UTC ${hrs}:${mins}:${secs}.${cs} // DEFCON ${systemState.alertActive ? '2' : '3'} // UPLINK: SYNC`;
-        this.statusRight.text = `LAYOUT [1-7/L]   CYCLE: ${this.cyclePaused ? 'PINNED [P]' : 'AUTO [P]'}   ALERT [A]   HELP [H]`;
+        const demoBadge =
+            systemState.layoutName === 'demo_2'
+                ? 'DEMO:2 [D]'
+                : systemState.layoutName === 'default'
+                    ? 'DEMO:1 [D]'
+                    : 'DEMO [D]';
+        this.statusRight.text = `${demoBadge}   LAYOUT [1-8/L]   CYCLE: ${this.cyclePaused ? 'PIN [P]' : 'AUTO [P]'}   ALERT [A]   HELP [H]`;
 
         if (systemState.alertActive) {
             const msg = ` ! PRIORITY INTERCEPT: ${systemState.alertTarget || 'VECTOR-OMEGA'} @ ${systemState.alertCoordsLabel || '35.6N 139.7E'} ! `;
@@ -180,9 +211,23 @@ export class WindowManager {
                 .rect(refRes.width / 2 - w / 2, 4, w, 18)
                 .fill({ color: theme.primary });
             this.statusAlertBg.visible = true;
+        } else if (systemState.ghostText) {
+            this.statusCenter.text = ` ${systemState.ghostText} `;
+            if (systemState.ghostFlash) {
+                this.statusCenter.style.fill = theme.bg;
+                this.statusAlertBg.clear();
+                const w = this.statusCenter.width + 12;
+                this.statusAlertBg
+                    .rect(refRes.width / 2 - w / 2, 4, w, 18)
+                    .fill({ color: theme.primary });
+                this.statusAlertBg.visible = true;
+            } else {
+                this.statusAlertBg.visible = false;
+                this.statusCenter.style.fill = theme.primary;
+            }
         } else {
             this.statusAlertBg.visible = false;
-            this.statusCenter.text = 'STATUS: NOMINAL // ALL SECTORS SECURE';
+            this.statusCenter.text = 'STATUS: NOMINAL // GHOST_OP: ACTIVE';
             this.statusCenter.style.fill = theme.primary;
         }
     }
@@ -585,8 +630,26 @@ export class WindowManager {
     }
 
     updateHeaderBadge(win) {
-        const name = String(win.activePluginName || '').toUpperCase();
+        const rawKey = String(win.activePluginName || '').toLowerCase();
+        const name = rawKey.toUpperCase();
         const isMax = this.maximizedWindowId === win.id;
+
+        // Dynamically sync window title to active plugin content
+        if (win.titleText && !win.isPopup && PLUGIN_TITLES[rawKey]) {
+            const cfgTitle = String(win.config?.title || '');
+            if (cfgTitle.startsWith('TEST_HARNESS')) {
+                win.titleText.text = `TEST_HARNESS // ${PLUGIN_TITLES[rawKey]}`;
+            } else if (cfgTitle.startsWith('PIP //')) {
+                win.titleText.text = `PIP // ${PLUGIN_TITLES[rawKey]}`;
+            } else if (cfgTitle.startsWith('X11_FLOAT //')) {
+                win.titleText.text = `X11_FLOAT // ${PLUGIN_TITLES[rawKey]}`;
+            } else if (win.isFloating) {
+                win.titleText.text = `FLOAT // ${PLUGIN_TITLES[rawKey]}`;
+            } else {
+                win.titleText.text = PLUGIN_TITLES[rawKey];
+            }
+        }
+
         let badge = `[${name}]`;
         if (Array.isArray(win.pluginConfig) && win.pluginConfig.length > 1) {
             badge = `[${name} ${win.cycleIndex + 1}/${win.pluginConfig.length}]`;

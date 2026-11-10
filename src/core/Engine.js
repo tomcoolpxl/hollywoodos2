@@ -14,6 +14,14 @@ const ALERT_SCENARIOS = [
     { target: 'CORE-GW // ZURICH-04', lat: 47.37, lon: 8.54, label: '47.4N 008.5E' }
 ];
 
+const GHOST_COMMANDS = [
+    'OP_CMD > ssh -J relay-04 root@10.207.4.19 --sync-panel',
+    'OP_CMD > sqlmap --vault=COSMIC --unredact-annex',
+    'OP_CMD > sat_tasking --kh12 --corridor=097.8-SSO',
+    'OP_CMD > tcpdump -ni eth0 -vvv port 8443 or 179',
+    'OP_CMD > exfil_commander --mount=/dev/uplink_exfil_0'
+];
+
 export class Engine {
     constructor() {
         this.app = null;
@@ -38,7 +46,14 @@ export class Engine {
             alertTarget: ALERT_SCENARIOS[0].target,
             alertCoords: { lat: ALERT_SCENARIOS[0].lat, lon: ALERT_SCENARIOS[0].lon },
             alertCoordsLabel: ALERT_SCENARIOS[0].label,
-            layoutName: 'default'
+            layoutName: 'default',
+            demoMacroTimer: 45.0,
+            ghostCmdIdx: 0,
+            ghostPhase: 'typing',
+            ghostCharIdx: 12,
+            ghostTimer: 0,
+            ghostText: '',
+            ghostFlash: false
         };
 
         // HUD & Toast State
@@ -173,6 +188,9 @@ export class Engine {
             case 'KeyA':
                 this.toggleSystemAlert();
                 break;
+            case 'KeyD':
+                this.toggleDemoMode();
+                break;
             case 'KeyL':
                 this.cycleLayoutPreset();
                 break;
@@ -235,7 +253,23 @@ export class Engine {
                 this.applyPreset('crisis');
                 this.showToast('LAYOUT [7]: CINEMA CRISIS CASCADE');
                 break;
+            case 'Digit8':
+                this.harnessPluginName = null;
+                this.applyPreset('demo_2');
+                this.showToast('LAYOUT [8]: DEMO MODE 2 (TEXT & FLOATING)');
+                break;
         }
+    }
+
+    toggleDemoMode() {
+        this.harnessPluginName = null;
+        const nextDemo = this.currentPresetName === 'default' ? 'demo_2' : 'default';
+        this.applyPreset(nextDemo);
+        this.showToast(
+            nextDemo === 'demo_2'
+                ? 'DEMO MODE 2: ASYMMETRIC TEXT + FLOATING WALL'
+                : 'DEMO MODE 1: 6-WINDOW TILED WORKSTATION'
+        );
     }
 
     toggleCyclePause() {
@@ -259,7 +293,7 @@ export class Engine {
     }
 
     cycleLayoutPreset() {
-        const presetOrder = ['default', 'minimal', 'debug_lab', 'map_deck', 'cyber_ops', 'workstation', 'crisis'];
+        const presetOrder = ['default', 'demo_2', 'minimal', 'debug_lab', 'map_deck', 'cyber_ops', 'workstation', 'crisis'];
         const idx = presetOrder.indexOf(this.currentPresetName);
         const nextPreset = presetOrder[(idx + 1) % presetOrder.length];
         this.harnessPluginName = null;
@@ -575,10 +609,11 @@ export class Engine {
             `SCALING MODE : ${modeStr}  |   SEED: ${global.seed || 'HOLLYWOOD-2026'}`,
             '',
             '--- LAYOUT COMPOSITIONS ---',
-            '[1] Default 6-Win Tiled   [2] Minimal Matrix Core',
-            '[3] Kernel Debug Lab      [4] Hero Map + Floating PiP',
-            '[5] Cyber & Sci-Fi Ops    [6] UNIX X11 Floating Stack',
-            '[7] Cinema Crisis Cascade [L] Cycle Layout Presets',
+            '[1] Demo 1: 6-Win Tiled   [8 / D] Demo 2: Text+Floating',
+            '[2] Minimal Matrix Core   [3] Kernel Debug Lab',
+            '[4] Hero Map + Float PiP  [5] Cyber & Sci-Fi Ops',
+            '[6] UNIX X11 Float Stack  [7] Cinema Crisis Cascade',
+            '[L] Cycle All 8 Presets   (Auto-switches Demo 1/2 @ 45s)',
             '',
             '--- OPERATOR CONTROLS ---',
             '[P / SPACE] Pin/Pause Cycling   [[ / ]] Step Active Plugin',
@@ -690,6 +725,7 @@ export class Engine {
 
         this.currentPresetName = presetName;
         this.systemState.layoutName = presetName;
+        this.systemState.demoMacroTimer = 45.0;
         this.errorTestActive = false;
         this.clearSystemAlert();
 
@@ -742,9 +778,74 @@ export class Engine {
                 }
             }
 
+            // Long-interval Macro Demo Rotation (Demo Mode 1 <-> Demo Mode 2 every 45s)
+            if (
+                !this.harnessPluginName &&
+                !this.windowManager?.cyclePaused &&
+                (this.currentPresetName === 'default' || this.currentPresetName === 'demo_2')
+            ) {
+                this.systemState.demoMacroTimer -= dt;
+                if (this.systemState.demoMacroTimer <= 0) {
+                    const nextDemo = this.currentPresetName === 'default' ? 'demo_2' : 'default';
+                    this.applyPreset(nextDemo);
+                    this.showToast(
+                        nextDemo === 'demo_2'
+                            ? 'AUTO-DIRECTOR -> DEMO MODE 2 [TEXT & FLOATING]'
+                            : 'AUTO-DIRECTOR -> DEMO MODE 1 [6-WIN TILED]'
+                    );
+                }
+            }
+
+            this.updateGhostOperator(dt);
             this.pluginManager.update(dt);
             this.windowManager.update(dt, this.systemState);
             this.systemState.alertChanged = false;
+        }
+    }
+
+    updateGhostOperator(dt) {
+        this.systemState.ghostTimer += dt;
+        const cmd = GHOST_COMMANDS[this.systemState.ghostCmdIdx % GHOST_COMMANDS.length];
+
+        if (this.systemState.ghostPhase === 'typing') {
+            if (this.systemState.ghostTimer >= 0.055) {
+                this.systemState.ghostTimer = 0;
+                this.systemState.ghostCharIdx += 1;
+                if (this.systemState.ghostCharIdx >= cmd.length) {
+                    this.systemState.ghostCharIdx = cmd.length;
+                    this.systemState.ghostPhase = 'exec';
+                    this.systemState.ghostFlash = true;
+                    this.systemState.ghostText = `${cmd} [EXEC: OK]`;
+
+                    // Autonomous Ghost Operator action: bring a floating window to front
+                    if (this.windowManager && !this.windowManager.maximizedWindowId) {
+                        const floatWins = Array.from(this.windowManager.windows.values()).filter(
+                            (w) => w.isFloating && !w.isPopup
+                        );
+                        if (floatWins.length > 0) {
+                            const pickWin = floatWins[this.systemState.ghostCmdIdx % floatWins.length];
+                            this.windowManager.bringToFront(pickWin.id);
+                        }
+                    }
+                } else {
+                    this.systemState.ghostFlash = false;
+                    this.systemState.ghostText = `${cmd.slice(0, this.systemState.ghostCharIdx)}█`;
+                }
+            }
+        } else if (this.systemState.ghostPhase === 'exec') {
+            if (this.systemState.ghostTimer >= 1.1) {
+                this.systemState.ghostTimer = 0;
+                this.systemState.ghostFlash = false;
+                this.systemState.ghostPhase = 'idle';
+                this.systemState.ghostText = `STATUS: NOMINAL // LAST_EXEC: OK`;
+            }
+        } else if (this.systemState.ghostPhase === 'idle') {
+            if (this.systemState.ghostTimer >= 5.5) {
+                this.systemState.ghostTimer = 0;
+                this.systemState.ghostCmdIdx = (this.systemState.ghostCmdIdx + 1) % GHOST_COMMANDS.length;
+                this.systemState.ghostCharIdx = 9;
+                this.systemState.ghostPhase = 'typing';
+            }
         }
     }
 

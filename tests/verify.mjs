@@ -22,6 +22,12 @@ import { OrbitPlugin } from '../src/plugins/OrbitPlugin.js';
 import { WaterfallPlugin } from '../src/plugins/WaterfallPlugin.js';
 import { Wireframe3DPlugin } from '../src/plugins/Wireframe3DPlugin.js';
 import { HelixPlugin } from '../src/plugins/HelixPlugin.js';
+import { FileSysPlugin } from '../src/plugins/FileSysPlugin.js';
+import { TrajectoryPlugin } from '../src/plugins/TrajectoryPlugin.js';
+import { ShellPlugin } from '../src/plugins/ShellPlugin.js';
+import { ProcTablePlugin } from '../src/plugins/ProcTablePlugin.js';
+import { DossierPlugin } from '../src/plugins/DossierPlugin.js';
+import { PacketPlugin } from '../src/plugins/PacketPlugin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -66,7 +72,7 @@ console.log('✓ Verified deterministic Mulberry32 RNG and .fork() reproducibili
 const rawJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'public/config.json'), 'utf8'));
 const cm = new ConfigManager();
 cm.config = structuredClone(rawJson);
-for (const presetName of ['default', 'minimal', 'debug_lab', 'map_deck', 'cyber_ops', 'workstation', 'crisis']) {
+for (const presetName of ['default', 'demo_2', 'minimal', 'debug_lab', 'map_deck', 'cyber_ops', 'workstation', 'crisis']) {
     const preset = cm.getPreset(presetName);
     assert.ok(preset, `Preset "${presetName}" must exist`);
     for (const w of preset.windows) {
@@ -183,7 +189,13 @@ const pluginClasses = [
     OrbitPlugin,
     WaterfallPlugin,
     Wireframe3DPlugin,
-    HelixPlugin
+    HelixPlugin,
+    FileSysPlugin,
+    TrajectoryPlugin,
+    ShellPlugin,
+    ProcTablePlugin,
+    DossierPlugin,
+    PacketPlugin
 ];
 
 for (const PluginCls of pluginClasses) {
