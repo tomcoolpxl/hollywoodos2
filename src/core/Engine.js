@@ -3,7 +3,7 @@ import { WindowManager, destroyContainerChildren } from './WindowManager.js';
 import { PluginManager } from './PluginManager.js';
 import { ConfigManager } from './ConfigManager.js';
 import { BootSequence } from './BootSequence.js';
-import { CRTFilter } from './CRTFilter.js';
+import { CRTFilter, CRT_PRESETS } from './CRTFilter.js';
 import { createRNG } from './RNG.js';
 import { ensureBitmapFontsInstalled, createRetroText } from './Adapters.js';
 
@@ -88,13 +88,28 @@ export class Engine {
 
     setupCRTFilter() {
         try {
-            this.crtFilter = new CRTFilter();
-            const crtEnabled = this.configManager.getGlobal().crtEnabled ?? true;
-            this.app.stage.filters = crtEnabled ? [this.crtFilter] : [];
+            const global = this.configManager.getGlobal();
+            const initialMode =
+                global.crtMode || (global.crtEnabled === false ? 'super_crisp' : 'soft_phosphor');
+            this.crtFilter = new CRTFilter({ preset: initialMode });
+            this.applyCRTMode(initialMode, false);
         } catch (e) {
             console.warn('CRTFilter initialization skipped:', e);
             this.crtFilter = null;
         }
+    }
+
+    applyCRTMode(modeId, saveConfig = true) {
+        if (!this.crtFilter) return null;
+        const preset = this.crtFilter.applyPreset(modeId);
+        const global = this.configManager.getGlobal();
+        global.crtMode = preset.id;
+        global.crtEnabled = preset.enabled;
+        this.app.stage.filters = preset.enabled ? [this.crtFilter] : [];
+        if (saveConfig) {
+            this.configManager.save();
+        }
+        return preset;
     }
 
     setupEventListeners() {
@@ -186,10 +201,13 @@ export class Engine {
             global.theme = params.get('theme');
         }
         if (params.has('crt')) {
-            const crtParam = params.get('crt');
-            global.crtEnabled = crtParam !== '0' && crtParam !== 'false';
-            if (this.crtFilter) {
-                this.app.stage.filters = global.crtEnabled ? [this.crtFilter] : [];
+            const crtParam = params.get('crt').toLowerCase();
+            if (crtParam === '0' || crtParam === 'false' || crtParam === 'off') {
+                this.applyCRTMode('super_crisp', false);
+            } else if (CRT_PRESETS.some((p) => p.id === crtParam)) {
+                this.applyCRTMode(crtParam, false);
+            } else {
+                this.applyCRTMode('soft_phosphor', false);
             }
         }
         if (params.has('preset')) {
@@ -299,10 +317,13 @@ export class Engine {
     toggleCRT() {
         if (!this.crtFilter) return;
         const global = this.configManager.getGlobal();
-        global.crtEnabled = !(global.crtEnabled ?? true);
-        this.app.stage.filters = global.crtEnabled ? [this.crtFilter] : [];
-        this.configManager.save();
-        this.showToast(`CRT SHADER: ${global.crtEnabled ? 'ENABLED' : 'BYPASSED'}`);
+        const currentId = global.crtMode || this.crtFilter.currentPreset?.id || 'soft_phosphor';
+        const idx = CRT_PRESETS.findIndex((p) => p.id === currentId);
+        const nextIdx = (idx + 1) % CRT_PRESETS.length;
+        const nextPreset = this.applyCRTMode(CRT_PRESETS[nextIdx].id, true);
+        if (nextPreset) {
+            this.showToast(`CRT DISPLAY [${nextIdx + 1}/${CRT_PRESETS.length}]: ${nextPreset.label}`);
+        }
         if (this.hudVisible) this.renderHUD();
     }
 
@@ -399,19 +420,21 @@ export class Engine {
                 ? 'LETTERBOX'
                 : 'STRETCH FILL';
 
+        const crtLabel = this.crtFilter?.currentPreset?.label || 'SOFT PHOSPHOR';
+
         const lines = [
             'HOLLYWOOD_OS 2 // OPERATOR HUD & KEYMAP',
             '',
             `ACTIVE VIEW  : ${(this.harnessPluginName ? `HARNESS (${this.harnessPluginName})` : this.currentPresetName).toUpperCase()}`,
             `COLOR THEME  : ${(global.theme || 'classic-green').toUpperCase()}`,
             `SCALING MODE : ${modeStr}`,
-            `CRT SHADER   : ${(global.crtEnabled ?? true) ? 'ENABLED' : 'BYPASSED'}`,
+            `CRT DISPLAY  : ${crtLabel}`,
             `PRNG SEED    : ${global.seed || 'HOLLYWOOD-2026'}`,
             '',
             '[1] Default 6-Win   [2] Minimal Matrix',
             '[3] Debug Lab       [4] Tactical Map Deck',
             '[5] Cyber Ops Deck  [Click Win] Maximize/Restore',
-            '[T] Cycle Theme     [C] Toggle CRT Filter',
+            '[T] Cycle Theme     [C] Cycle 5 CRT Display Modes',
             '[S] Scaling Mode    [I] Integer-Snap Retro',
             '[E] Simulate Fault  [R] System Reboot',
             '[X] Export JSON     [O] Import JSON Config',
@@ -463,8 +486,9 @@ export class Engine {
             const global = this.configManager.getGlobal();
             this.rng.reset(global.seed || 'HOLLYWOOD-2026');
             if (this.crtFilter) {
-                const crtEnabled = global.crtEnabled ?? true;
-                this.app.stage.filters = crtEnabled ? [this.crtFilter] : [];
+                const mode =
+                    global.crtMode || (global.crtEnabled === false ? 'super_crisp' : 'soft_phosphor');
+                this.applyCRTMode(mode, false);
             }
             this.handleResize();
         }

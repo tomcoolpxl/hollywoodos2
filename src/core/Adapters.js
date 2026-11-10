@@ -1,4 +1,4 @@
-import { BlurFilter, Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { gsap } from 'gsap';
 
 const CHAR_WIDTH_CACHE = new Map();
@@ -254,8 +254,8 @@ export class GridAdapter {
 }
 
 /**
- * FreeformAdapter: Separates `vectorContainer` (graphics with subtle analog CRT blur/softness)
- * from `uiContainer` (crisp 4K text labels).
+ * FreeformAdapter: Provides background graphics, dynamic vector graphics, and text labels.
+ * Crispness vs. analog fuzziness is controlled globally via CRTFilter presets.
  */
 export class FreeformAdapter {
     constructor(container, width, height) {
@@ -263,27 +263,12 @@ export class FreeformAdapter {
         this.width = width;
         this.height = height;
 
-        this.vectorContainer = new Container();
         this.bgGraphics = new Graphics();
         this.graphics = new Graphics();
         this.uiContainer = new Container();
 
-        this.vectorContainer.addChild(this.bgGraphics);
-        this.vectorContainer.addChild(this.graphics);
-
-        // Apply subtle analog phosphor softness to vector graphics while keeping text labels crisp
-        try {
-            const vectorBlur = new BlurFilter({
-                strength: 1.15,
-                quality: 2,
-                resolution: 'inherit'
-            });
-            this.vectorContainer.filters = [vectorBlur];
-        } catch {
-            // Fallback if filter unavailable in headless mock
-        }
-
-        this.container.addChild(this.vectorContainer);
+        this.container.addChild(this.bgGraphics);
+        this.container.addChild(this.graphics);
         this.container.addChild(this.uiContainer);
     }
 
