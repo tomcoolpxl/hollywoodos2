@@ -1,5 +1,5 @@
 {
-  "version": "2.2.0",
+  "version": "2.3.0",
   "global": {
     "seed": "HOLLYWOOD-2026",
     "theme": "classic-green",
@@ -28,7 +28,11 @@
       "graph": { "maxPoints": 60, "updateRate": 0.1 },
       "globe": { "lats": 12, "longs": 16, "rotationSpeed": 0.5 },
       "code": { "fontSize": 12, "lineHeight": 14 },
-      "boot": { "fontSize": 14, "lineHeight": 18 }
+      "boot": { "fontSize": 14, "lineHeight": 18 },
+      "decrypt": { "fontSize": 14, "lineHeight": 18 },
+      "scope": {},
+      "netgraph": {},
+      "orbit": {}
     }
   },
   "themes": {
@@ -76,8 +80,8 @@
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": ["boot", "globe", "map"],
-          "cycleInterval": 4000
+          "plugin": ["boot", "globe", "map", "orbit"],
+          "cycleInterval": 4500
         },
         {
           "id": "win_3",
@@ -86,7 +90,8 @@
           "y": 10,
           "width": 520,
           "height": 435,
-          "plugin": "hex"
+          "plugin": ["hex", "decrypt"],
+          "cycleInterval": 7000
         },
         {
           "id": "win_4",
@@ -95,7 +100,8 @@
           "y": 455,
           "width": 520,
           "height": 435,
-          "plugin": "spectrum"
+          "plugin": ["spectrum", "scope"],
+          "cycleInterval": 6000
         },
         {
           "id": "win_5",
@@ -114,7 +120,8 @@
           "y": 455,
           "width": 520,
           "height": 435,
-          "plugin": "graph"
+          "plugin": ["graph", "netgraph"],
+          "cycleInterval": 6500
         }
       ]
     },
@@ -211,6 +218,46 @@
           "width": 530,
           "height": 435,
           "plugin": "spectrum"
+        }
+      ]
+    },
+    "cyber_ops": {
+      "windows": [
+        {
+          "id": "cyb_1",
+          "title": "CRYPTO_KEY_DECRYPTOR",
+          "x": 10,
+          "y": 10,
+          "width": 785,
+          "height": 435,
+          "plugin": "decrypt"
+        },
+        {
+          "id": "cyb_2",
+          "title": "NETWORK_NODE_TOPOLOGY",
+          "x": 805,
+          "y": 10,
+          "width": 785,
+          "height": 435,
+          "plugin": "netgraph"
+        },
+        {
+          "id": "cyb_3",
+          "title": "SATELLITE_GROUND_TRACK",
+          "x": 10,
+          "y": 455,
+          "width": 785,
+          "height": 435,
+          "plugin": "orbit"
+        },
+        {
+          "id": "cyb_4",
+          "title": "HARMONIC_PHASE_SCOPE",
+          "x": 805,
+          "y": 455,
+          "width": 785,
+          "height": 435,
+          "plugin": "scope"
         }
       ]
     }

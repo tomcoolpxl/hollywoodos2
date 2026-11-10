@@ -1,4 +1,5 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Rectangle } from 'pixi.js';
+import { gsap } from 'gsap';
 import { Cursor } from './Cursor.js';
 import { createRetroText, GridAdapter, FreeformAdapter } from './Adapters.js';
 
@@ -20,6 +21,7 @@ export class WindowManager {
         this.globalRng = globalRng;
 
         this.windows = new Map(); // id -> windowObject
+        this.maximizedWindowId = null;
         this.container = new Container();
         this.app.stage.addChild(this.container);
     }
@@ -46,23 +48,22 @@ export class WindowManager {
         const innerWidth = Math.max(10, width - 20);
         const innerHeight = Math.max(10, height - 32);
 
-        // Root container for this window
         const winContainer = new Container();
         winContainer.x = config.x || 0;
         winContainer.y = config.y || 0;
+        winContainer.eventMode = 'static';
+        winContainer.cursor = 'pointer';
+        winContainer.hitArea = new Rectangle(0, 0, width, height);
 
         // Window Chrome (Frame + Header Divider)
         const frame = new Graphics();
-        frame.rect(0, 0, width, height);
-        frame.fill({ color: bgColor });
-        frame.stroke({ width: borderWidth, color: borderColor });
-
-        frame.moveTo(0, 20);
-        frame.lineTo(width, 20);
-        frame.stroke({ width: 1, color: borderColor });
         winContainer.addChild(frame);
 
-        // Window Title
+        // Cycling Progress Bar in Header
+        const cycleBar = new Graphics();
+        winContainer.addChild(cycleBar);
+
+        // Window Title (Left)
         const titleText = createRetroText(config.title || 'TERMINAL', {
             fontSize: 14,
             fill: titleColor
@@ -71,26 +72,36 @@ export class WindowManager {
         titleText.y = 2;
         winContainer.addChild(titleText);
 
-        // Masked Body Container (holds mask, pluginContainer, errorContainer, and cursor)
+        // Active Plugin / Status Badge (Right)
+        const badgeText = createRetroText('', {
+            fontSize: 11,
+            fill: theme.secondary
+        });
+        badgeText.anchor?.set(1, 0);
+        badgeText.x = width - 10;
+        badgeText.y = 4;
+        winContainer.addChild(badgeText);
+
+        // Masked Body Container
         const bodyContainer = new Container();
         bodyContainer.x = 10;
         bodyContainer.y = 22;
 
         const mask = new Graphics();
-        mask.rect(0, 0, innerWidth, innerHeight).fill(0xffffff);
         bodyContainer.mask = mask;
         bodyContainer.addChild(mask);
 
-        // Dedicated child container for the active plugin (isolated from mask & cursor!)
         const pluginContainer = new Container();
         bodyContainer.addChild(pluginContainer);
 
-        // Dedicated child container for isolated crash/error screen
+        const transitionGraphics = new Graphics();
+        transitionGraphics.visible = false;
+        bodyContainer.addChild(transitionGraphics);
+
         const errorContainer = new Container();
         errorContainer.visible = false;
         bodyContainer.addChild(errorContainer);
 
-        // Shared Cursor sits on top of pluginContainer inside bodyContainer
         const cursor = new Cursor(bodyContainer, borderColor);
 
         winContainer.addChild(bodyContainer);
@@ -102,15 +113,31 @@ export class WindowManager {
             id,
             config,
             theme,
+            borderColor,
+            borderWidth,
+            bgColor,
+            titleColor,
             container: winContainer,
             bodyContainer,
-            contentContainer: pluginContainer, // Alias for backward compatibility
+            contentContainer: pluginContainer,
             pluginContainer,
+            transitionGraphics,
             errorContainer,
             frame,
+            cycleBar,
+            mask,
             titleText,
+            badgeText,
+            x: config.x || 0,
+            y: config.y || 0,
             width,
             height,
+            savedBounds: {
+                x: config.x || 0,
+                y: config.y || 0,
+                width,
+                height
+            },
             innerWidth,
             innerHeight,
             pluginInstance: null,
@@ -126,13 +153,110 @@ export class WindowManager {
             errorFlickerTimer: 0
         };
 
+        this.drawWindowChrome(windowObj);
+
+        winContainer.on('pointertap', () => {
+            this.toggleMaximizeWindow(id);
+        });
+
         this.windows.set(id, windowObj);
-        this.loadCurrentPlugin(windowObj);
+        this.loadCurrentPlugin(windowObj, false);
 
         return windowObj;
     }
 
-    loadCurrentPlugin(win) {
+    drawWindowChrome(win) {
+        win.innerWidth = Math.max(10, win.width - 20);
+        win.innerHeight = Math.max(10, win.height - 32);
+        win.container.x = win.x;
+        win.container.y = win.y;
+        win.container.hitArea = new Rectangle(0, 0, win.width, win.height);
+
+        win.frame.clear();
+        win.frame.rect(0, 0, win.width, win.height);
+        win.frame.fill({ color: win.bgColor });
+        win.frame.stroke({ width: win.borderWidth, color: win.borderColor });
+
+        win.frame.moveTo(0, 20);
+        win.frame.lineTo(win.width, 20);
+        win.frame.stroke({ width: 1, color: win.borderColor });
+
+        win.mask.clear();
+        win.mask.rect(0, 0, win.innerWidth, win.innerHeight).fill(0xffffff);
+
+        win.badgeText.x = win.width - 10;
+        this.updateHeaderBadge(win);
+    }
+
+    updateHeaderBadge(win) {
+        const name = String(win.activePluginName || '').toUpperCase();
+        const isMax = this.maximizedWindowId === win.id;
+        let badge = `[${name}]`;
+        if (Array.isArray(win.pluginConfig) && win.pluginConfig.length > 1) {
+            badge = `[${name} ${win.cycleIndex + 1}/${win.pluginConfig.length}]`;
+        }
+        if (isMax) {
+            badge += ' [MAX]';
+        }
+        win.badgeText.text = badge;
+    }
+
+    toggleMaximizeWindow(windowId) {
+        const win = this.windows.get(windowId);
+        if (!win) return false;
+
+        if (this.maximizedWindowId === windowId) {
+            this.restoreMaximizedWindow();
+            return false;
+        }
+
+        // If another window was maximized first, restore it
+        if (this.maximizedWindowId) {
+            this.restoreMaximizedWindow();
+        }
+
+        this.maximizedWindowId = windowId;
+        const refRes = this.configManager?.getGlobal()?.referenceResolution || {
+            width: 1600,
+            height: 900
+        };
+
+        for (const [id, otherWin] of this.windows.entries()) {
+            if (id !== windowId) {
+                otherWin.container.visible = false;
+            }
+        }
+
+        win.x = 10;
+        win.y = 10;
+        win.width = refRes.width - 20;
+        win.height = refRes.height - 20;
+        this.drawWindowChrome(win);
+        this.loadCurrentPlugin(win, true);
+        return true;
+    }
+
+    restoreMaximizedWindow() {
+        if (!this.maximizedWindowId) return false;
+        const win = this.windows.get(this.maximizedWindowId);
+        this.maximizedWindowId = null;
+
+        for (const otherWin of this.windows.values()) {
+            otherWin.container.visible = true;
+        }
+
+        if (win) {
+            win.x = win.savedBounds.x;
+            win.y = win.savedBounds.y;
+            win.width = win.savedBounds.width;
+            win.height = win.savedBounds.height;
+            this.drawWindowChrome(win);
+            this.loadCurrentPlugin(win, true);
+        }
+        return true;
+    }
+
+    loadCurrentPlugin(win, animateTransition = false) {
         let pluginName = '';
         if (Array.isArray(win.pluginConfig)) {
             pluginName = win.pluginConfig[win.cycleIndex];
@@ -141,23 +265,23 @@ export class WindowManager {
         }
 
         if (pluginName) {
-            this.loadPluginIntoWindow(win.id, pluginName);
+            this.loadPluginIntoWindow(win.id, pluginName, animateTransition);
         }
     }
 
-    loadPluginIntoWindow(windowId, pluginName) {
+    loadPluginIntoWindow(windowId, pluginName, animateTransition = false) {
         const win = this.windows.get(windowId);
         if (!win) return;
 
-        // Destroy previous plugin and free all GPU children inside pluginContainer
         if (win.pluginInstance) {
             this.pluginManager.destroyPlugin(windowId);
             win.pluginInstance = null;
         }
+        gsap.killTweensOf(win.pluginContainer);
+        gsap.killTweensOf(win.transitionGraphics);
         destroyContainerChildren(win.pluginContainer);
         this.clearErrorScreen(win);
 
-        // Reset Cursor state for the new plugin
         if (win.cursor) {
             win.cursor.setEnabled(false);
             win.cursor.setColor(win.theme.primary);
@@ -190,8 +314,41 @@ export class WindowManager {
         };
 
         win.activePluginName = pluginName;
+        this.updateHeaderBadge(win);
+
         const instance = this.pluginManager.instantiate(pluginName, windowId, context);
         win.pluginInstance = instance;
+
+        if (animateTransition && !win.hasError) {
+            this.playScanlineTransition(win);
+        } else {
+            win.pluginContainer.alpha = 1;
+            win.pluginContainer.x = 0;
+            win.transitionGraphics.visible = false;
+        }
+    }
+
+    playScanlineTransition(win) {
+        const tg = win.transitionGraphics;
+        tg.clear();
+        tg.rect(0, 0, win.innerWidth, 4).fill({ color: win.theme.peak, alpha: 0.75 });
+        tg.visible = true;
+        tg.y = 0;
+
+        win.pluginContainer.alpha = 0.2;
+        gsap.to(win.pluginContainer, {
+            alpha: 1,
+            duration: 0.22,
+            ease: 'steps(4)'
+        });
+        gsap.to(tg, {
+            y: win.innerHeight,
+            duration: 0.22,
+            ease: 'power1.out',
+            onComplete: () => {
+                tg.visible = false;
+            }
+        });
     }
 
     showErrorScreen(windowId, error) {
@@ -243,6 +400,8 @@ export class WindowManager {
 
     update(dt) {
         for (const win of this.windows.values()) {
+            if (!win.container.visible) continue;
+
             const scaledDt = dt * (win.speedMultiplier ?? 1.0);
 
             if (win.hasError) {
@@ -260,10 +419,16 @@ export class WindowManager {
 
             if (Array.isArray(win.pluginConfig) && win.pluginConfig.length > 1) {
                 win.cycleTimer += scaledDt * 1000;
+                const progress = Math.min(1, win.cycleTimer / win.cycleInterval);
+                win.cycleBar.clear();
+                win.cycleBar
+                    .rect(1, 18, (win.width - 2) * progress, 2)
+                    .fill({ color: win.theme.secondary, alpha: 0.85 });
+
                 if (win.cycleTimer >= win.cycleInterval) {
                     win.cycleTimer = 0;
                     win.cycleIndex = (win.cycleIndex + 1) % win.pluginConfig.length;
-                    this.loadCurrentPlugin(win);
+                    this.loadCurrentPlugin(win, true);
                 }
             }
         }
@@ -279,7 +444,10 @@ export class WindowManager {
     }
 
     clear() {
+        this.maximizedWindowId = null;
         for (const [id, win] of this.windows.entries()) {
+            gsap.killTweensOf(win.pluginContainer);
+            gsap.killTweensOf(win.transitionGraphics);
             this.pluginManager.destroyPlugin(id);
             if (win.cursor) {
                 win.cursor.destroy();

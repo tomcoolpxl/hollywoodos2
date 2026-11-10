@@ -131,6 +131,14 @@ export class Engine {
             case 'Slash':
                 this.toggleHUD();
                 break;
+            case 'Escape':
+                if (this.hudVisible) {
+                    this.toggleHUD();
+                } else if (this.windowManager?.maximizedWindowId) {
+                    this.windowManager.restoreMaximizedWindow();
+                    this.showToast('RESTORED TILED VIEW');
+                }
+                break;
             case 'Digit1':
                 this.harnessPluginName = null;
                 this.applyPreset('default');
@@ -150,6 +158,11 @@ export class Engine {
                 this.harnessPluginName = null;
                 this.applyPreset('map_deck');
                 this.showToast('PRESET: TACTICAL MAP DECK');
+                break;
+            case 'Digit5':
+                this.harnessPluginName = null;
+                this.applyPreset('cyber_ops');
+                this.showToast('PRESET: CYBER OPS DECK');
                 break;
         }
     }
@@ -365,8 +378,8 @@ export class Engine {
 
         const theme = this.configManager.getTheme();
         const global = this.configManager.getGlobal();
-        const boxW = 540;
-        const boxH = 340;
+        const boxW = 560;
+        const boxH = 380;
         const x = Math.max(10, Math.floor((window.innerWidth - boxW) / 2));
         const y = Math.max(10, Math.floor((window.innerHeight - boxH) / 2));
 
@@ -393,11 +406,12 @@ export class Engine {
             '',
             '[1] Default 6-Win   [2] Minimal Matrix',
             '[3] Debug Lab       [4] Tactical Map Deck',
+            '[5] Cyber Ops Deck  [Click Win] Maximize/Restore',
             '[T] Cycle Theme     [C] Toggle CRT Filter',
             '[S] Scaling Mode    [I] Integer-Snap Retro',
             '[E] Simulate Fault  [R] System Reboot',
             '[X] Export JSON     [O] Import JSON Config',
-            '[H / ?] Close HUD'
+            '[H / ? / ESC] Close HUD'
         ].join('\n');
 
         const hudText = createRetroText(lines, {
