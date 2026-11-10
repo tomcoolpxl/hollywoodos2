@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 const FONT_NAME = 'HollywoodMono';
 const CHAR_WIDTH_CACHE = new Map();
 let fontsInstalled = false;
+let bitmapFontReady = false;
 
 /**
  * Installs crisp monospace bitmap font atlases for PixiJS v8 so text updates
@@ -17,7 +18,7 @@ export function ensureBitmapFontsInstalled() {
     const chars = [
         [' ', '~'],
         katakanaRange,
-        ['│', '─', '┌', '┐', '└', '┘', '█', '▓', '▒', '░']
+        '│─┌┐└┘█▓▒░'
     ];
 
     try {
@@ -31,8 +32,10 @@ export function ensureBitmapFontsInstalled() {
             chars,
             resolution: 2
         });
+        bitmapFontReady = true;
     } catch (e) {
         console.warn('BitmapFont install fallback:', e);
+        bitmapFontReady = false;
     }
 }
 
@@ -69,30 +72,34 @@ export function createRetroText(text = '', options = {}) {
     const wordWrap = options.wordWrap ?? false;
     const wordWrapWidth = options.wordWrapWidth ?? 400;
 
-    try {
-        const bmp = new BitmapText({
-            text,
-            style: {
-                fontFamily: FONT_NAME,
-                fontSize,
-                fill,
-                lineHeight,
-                wordWrap,
-                wordWrapWidth
-            }
-        });
-        return bmp;
-    } catch {
-        const style = new TextStyle({
-            fontFamily: 'Consolas, "Courier New", monospace',
-            fontSize,
-            fill,
-            lineHeight,
-            wordWrap,
-            wordWrapWidth
-        });
-        return new Text({ text, style });
+    if (bitmapFontReady) {
+        try {
+            const bmp = new BitmapText({
+                text,
+                style: {
+                    fontFamily: FONT_NAME,
+                    fontSize,
+                    fill,
+                    lineHeight,
+                    wordWrap,
+                    wordWrapWidth
+                }
+            });
+            return bmp;
+        } catch {
+            // Fall through to standard Text
+        }
     }
+
+    const style = new TextStyle({
+        fontFamily: 'Consolas, "Courier New", monospace',
+        fontSize,
+        fill,
+        lineHeight,
+        wordWrap,
+        wordWrapWidth
+    });
+    return new Text({ text, style });
 }
 
 const ANSI_TAG_REGEX = /\{(primary|secondary|dim|peak|error|inverse)\}([\s\S]*?)\{\/\}/g;

@@ -43,7 +43,9 @@ export class BootSequence {
         this.drawBackground(window.innerWidth, window.innerHeight);
         this.container.addChild(this.bg);
 
-        this.textObj = createRetroText('', {
+        this.lines = [this.bootLog[0]];
+        this.step = 1;
+        this.textObj = createRetroText(this.lines.join('\n'), {
             fontSize: 16,
             lineHeight: 20,
             fill: this.themeColor

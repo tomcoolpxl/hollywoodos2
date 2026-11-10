@@ -30,8 +30,6 @@ export class Engine {
 
         this._onResize = () => this.handleResize();
         this._onKeyDown = (e) => this.handleKeyDown(e);
-        this._onBlur = () => { this.isPaused = true; };
-        this._onFocus = () => { this.isPaused = false; };
         this._onVisibilityChange = () => {
             this.isPaused = document.hidden;
         };
@@ -98,8 +96,6 @@ export class Engine {
     setupEventListeners() {
         window.addEventListener('resize', this._onResize);
         window.addEventListener('keydown', this._onKeyDown);
-        window.addEventListener('blur', this._onBlur);
-        window.addEventListener('focus', this._onFocus);
         document.addEventListener('visibilitychange', this._onVisibilityChange);
     }
 

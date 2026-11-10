@@ -28,12 +28,14 @@ export class MatrixPlugin {
         this.fontSize = context.options?.fontSize ?? 14;
         this.charWidth = getMonoCharWidth(this.fontSize);
 
-        // PixiJS v8 FillGradient: dim tail at top (0.0) -> primary body (0.7) -> bright white head at bottom (1.0)
+        // PixiJS v8 FillGradient uses `colorStops` and end.x = 0.12 so multi-line Text
+        // stretches the gradient across the full column height rather than per-line.
         const gradient = new FillGradient({
             type: 'linear',
             start: { x: 0, y: 0 },
-            end: { x: 0, y: 1 },
-            stops: [
+            end: { x: 0.12, y: 1 },
+            textureSpace: 'local',
+            colorStops: [
                 { offset: 0.0, color: this.theme.dim },
                 { offset: 0.72, color: this.theme.primary },
                 { offset: 1.0, color: 0xFFFFFF }
