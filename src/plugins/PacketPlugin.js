@@ -67,6 +67,8 @@ export class PacketPlugin {
             fontSize: context.options.fontSize || 12,
             lineHeight: context.options.lineHeight || 15
         });
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
+        this.cursorByteIdx = 0;
 
         this.packets = [];
         this.pktCounter = 4190;
@@ -188,6 +190,14 @@ export class PacketPlugin {
 
         this.lines = out.slice(0, rows);
         this.adapter.setLines(this.lines);
+
+        // Move hardware block cursor across the inspected Hex payload bytes
+        this.cursorByteIdx = ((this.cursorByteIdx || 0) + 1) % 32;
+        const hexRowOffset = Math.floor(this.cursorByteIdx / 8);
+        const byteInRow = this.cursorByteIdx % 8;
+        const targetRow = Math.max(0, this.lines.length - 4 + (hexRowOffset % 4));
+        const targetCol = Math.min(cols - 2, 8 + byteInRow * 3);
+        this.adapter.setCursorGrid(targetCol, targetRow);
     }
 
     destroy() {

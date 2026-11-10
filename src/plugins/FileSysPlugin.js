@@ -31,6 +31,7 @@ export class FileSysPlugin {
         this.timer = 0;
         this.selectedIdx = 1;
         this.copyProgress = 0.24;
+        this.scanCol = 0;
         this.sectorMap = [];
         this.iops = 14820;
         this.throughput = 1.84;
@@ -44,6 +45,7 @@ export class FileSysPlugin {
             fontSize: context.options.fontSize || 13,
             lineHeight: context.options.lineHeight || 16
         });
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
 
         this.selectedIdx = 1;
         this.copyProgress = 0.32;
@@ -68,6 +70,7 @@ export class FileSysPlugin {
 
         if (this.timer >= 0.14) {
             this.timer = 0;
+            this.scanCol = (this.scanCol + 1) % 48;
             // Mutate 2 sector blocks deterministically
             const idxA = this.rng.int(0, this.sectorMap.length - 1);
             const idxB = this.rng.int(0, this.sectorMap.length - 1);
@@ -166,13 +169,17 @@ export class FileSysPlugin {
         out.push(`|{peak}${xferCell}{/}|`);
 
         const fKeyBar = state?.alertActive
-            ? ' {error}!! EMERGENCY WIPE ARMED !!{/} F1:HELP F3:HEX F5:EXFIL F8:SHRED_VOLUME '
-            : ' F1:HELP  F2:MOUNT  F3:VIEW_HEX  F5:EXFIL_COPY  F6:REKEY  F8:ZERO_WIPE ';
+            ? ' {error}!! EMERGENCY WIPE ARMED !!{/} CMD# shred -fz -n 3 /mnt/vault04 '
+            : ` CMD:/mnt/vault04# rsync --cipher=chacha20 ${activeFile.name} /dev/uplink_0`;
         out.push('+' + '-'.repeat(innerW) + '+');
-        out.push(fKeyBar.slice(0, cols));
+        out.push(`${fKeyBar.slice(0, cols - 3)}{inverse} {/}`);
 
         this.lines = out.slice(0, rows);
         this.adapter.setLines(this.lines);
+        // Hardware block cursor scans across the INODE SECTOR MAP row
+        const sectorRow = Math.min(this.lines.length - 1, listRows + 4);
+        const sectorCol = Math.min(cols - 3, 21 + (this.scanCol % mapW));
+        this.adapter.setCursorGrid(sectorCol, sectorRow);
     }
 
     destroy() {

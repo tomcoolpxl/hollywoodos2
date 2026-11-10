@@ -86,7 +86,7 @@ export class ShellPlugin {
             fontSize: context.options.fontSize || 13,
             lineHeight: context.options.lineHeight || 16
         });
-        this.adapter.enableCursor(context.cursor);
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
         this.maxLines = Math.max(10, this.adapter.rows);
 
         this.historyLines = [
@@ -175,6 +175,13 @@ export class ShellPlugin {
             visible.push(activeLine);
             cursorRow = visible.length - 1;
             cursorCol = current.prompt.length + typed.length;
+        } else if (visible.length > 0) {
+            const lastPlain = visible[visible.length - 1].replace(
+                /\{(primary|secondary|dim|peak|error|inverse)\}|\{\/\}/g,
+                ''
+            );
+            cursorRow = visible.length - 1;
+            cursorCol = Math.min(this.adapter.cols - 2, lastPlain.length);
         }
 
         this.lines = visible;

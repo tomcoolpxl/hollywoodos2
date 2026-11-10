@@ -35,6 +35,7 @@ export class DecryptPlugin {
             lineHeight,
             color: context.theme?.primary ?? 0x00FF00
         });
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
         this.cols = this.adapter.cols;
         this.rows = this.adapter.rows;
 
@@ -193,6 +194,16 @@ export class DecryptPlugin {
         } else {
             this.adapter.setLines(leftLines, false);
         }
+
+        // Position hardware block cursor on the active cracking character of ACTIVE CIPHER VECTOR (row 5)
+        let activeCharCol = 2 + this.lockedCount;
+        for (let i = 0; i < this.lockedMask.length; i++) {
+            if (!this.lockedMask[i]) {
+                activeCharCol = 2 + i;
+                break;
+            }
+        }
+        this.adapter.setCursorGrid(activeCharCol, 5);
     }
 
     destroy() {

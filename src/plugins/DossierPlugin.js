@@ -72,6 +72,7 @@ export class DossierPlugin {
             fontSize: context.options.fontSize || 13,
             lineHeight: context.options.lineHeight || 16
         });
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
 
         this.dossierIdx = this.rng.int(0, DOSSIERS.length - 1);
         this.revealChars = 14;
@@ -115,9 +116,9 @@ export class DossierPlugin {
         const out = [];
         const border = '+' + '-'.repeat(innerW) + '+';
 
-        // SQL Query Header
-        const queryStr = ` SQL> SELECT * FROM INTEL_DOSSIER WHERE ASSET_ID='${rec.id}'; [1 ROW]`;
-        out.push(`{peak}${queryStr.slice(0, cols)}{/}`);
+        // SQL Query Header with inline active cursor
+        const queryStr = ` SQL> SELECT * FROM INTEL_DOSSIER WHERE ASSET_ID='${rec.id}';`.slice(0, cols - 3);
+        out.push(`{peak}${queryStr}{/} {inverse} {/}`);
         out.push(border);
 
         const titleRow = ` CLASSIFIED INTELLIGENCE RECORD // CLEARANCE: ${rec.clearance}`
@@ -183,6 +184,10 @@ export class DossierPlugin {
 
         this.lines = out.slice(0, rows);
         this.adapter.setLines(this.lines);
+        // Hardware block cursor tracks the active un-redacting character head on CRYPTO_VEC
+        const cursorRow = Math.min(this.lines.length - 1, 15);
+        const cursorCol = Math.min(cols - 3, 15 + Math.min(this.revealChars, rec.secret3.length));
+        this.adapter.setCursorGrid(cursorCol, cursorRow);
     }
 
     destroy() {

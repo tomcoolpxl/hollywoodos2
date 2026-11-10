@@ -79,6 +79,7 @@ export class CodePlugin {
             lineHeight,
             color: context.theme?.primary ?? 0x00FF00
         });
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
         this.maxLines = Math.max(10, this.adapter.rows);
 
         this.blockIdx = this.rng.int(0, CODE_BLOCKS.length - 1);
@@ -90,6 +91,17 @@ export class CodePlugin {
             this.addLine();
         }
         this.adapter.setLines(this.lines, false);
+        this.syncCursor();
+    }
+
+    syncCursor() {
+        if (!this.adapter || this.lines.length === 0) return;
+        const lastRaw = this.lines[this.lines.length - 1] || '';
+        const plain = lastRaw.replace(/\{(primary|secondary|dim|peak|error|inverse)\}|\{\/\}/g, '');
+        this.adapter.setCursorGrid(
+            Math.min(this.adapter.cols - 2, plain.length),
+            this.lines.length - 1
+        );
     }
 
     addLine() {
@@ -115,6 +127,7 @@ export class CodePlugin {
             this.speed = this.lineInBlock === 0 ? 0.28 : 0.05 + this.rng() * 0.06;
             this.addLine();
             this.adapter.setLines(this.lines, false);
+            this.syncCursor();
         }
     }
 

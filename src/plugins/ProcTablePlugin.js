@@ -34,6 +34,8 @@ export class ProcTablePlugin {
             fontSize: context.options.fontSize || 13,
             lineHeight: context.options.lineHeight || 16
         });
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
+        this.cmdStep = 14;
 
         this.procs = BASE_PROCS.map((p) => ({
             ...p,
@@ -148,13 +150,18 @@ export class ProcTablePlugin {
             }
         }
 
-        const footer = alertActive
-            ? '{error} [!] KERNEL SCHEDULER: REALTIME PREEMPTION LOCK // IRQ AFFINITY PINNED {/}'
-            : ' F1:HELP  F3:SEARCH  F4:FILTER  F5:TREE  F6:SORT_CPU%  F9:SIGKILL ';
-        out.push(footer.slice(0, cols));
+        const topPid = this.procs[0]?.pid || 1024;
+        const fullCmd = alertActive
+            ? `GHOST_OP > chrt -f -p 99 ${topPid} && taskset -pc 0-15 ${topPid} [RT-LOCK]`
+            : `GHOST_OP > renice -n -20 -p ${topPid} --io-class=REALTIME --trace-syscalls`;
+        this.cmdStep = ((this.cmdStep || 12) + 3) % (fullCmd.length + 6);
+        const typedLen = Math.min(fullCmd.length, Math.max(11, this.cmdStep));
+        const footer = fullCmd.slice(0, Math.min(cols - 2, typedLen));
+        out.push(`{peak}${footer}{/}`);
 
         this.lines = out.slice(0, rows);
         this.adapter.setLines(this.lines);
+        this.adapter.setCursorGrid(footer.length, this.lines.length - 1);
     }
 
     destroy() {

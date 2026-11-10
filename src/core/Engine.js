@@ -833,14 +833,14 @@ export class Engine {
                 }
             }
         } else if (this.systemState.ghostPhase === 'exec') {
-            if (this.systemState.ghostTimer >= 1.1) {
+            if (this.systemState.ghostTimer >= 0.85) {
                 this.systemState.ghostTimer = 0;
                 this.systemState.ghostFlash = false;
                 this.systemState.ghostPhase = 'idle';
-                this.systemState.ghostText = `STATUS: NOMINAL // LAST_EXEC: OK`;
+                this.systemState.ghostText = `OP_CMD > _█`;
             }
         } else if (this.systemState.ghostPhase === 'idle') {
-            if (this.systemState.ghostTimer >= 5.5) {
+            if (this.systemState.ghostTimer >= 0.75) {
                 this.systemState.ghostTimer = 0;
                 this.systemState.ghostCmdIdx = (this.systemState.ghostCmdIdx + 1) % GHOST_COMMANDS.length;
                 this.systemState.ghostCharIdx = 9;

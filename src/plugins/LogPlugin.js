@@ -45,6 +45,7 @@ export class LogPlugin {
             color: context.theme?.primary ?? 0x00FF00,
             wordWrap: false
         });
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
         this.maxLines = Math.max(5, this.adapter.rows);
 
         // Pre-populate several initial log entries so the window starts rich
@@ -85,6 +86,11 @@ export class LogPlugin {
         }
 
         this.adapter.setLines(this.lines, animate && didScroll);
+        const plain = line.replace(/\{(primary|secondary|dim|peak|error|inverse)\}|\{\/\}/g, '');
+        this.adapter.setCursorGrid(
+            Math.min(this.adapter.cols - 2, plain.length),
+            this.lines.length - 1
+        );
     }
 
     update(dt) {

@@ -39,15 +39,15 @@ export class BootPlugin {
             color: context.theme?.primary ?? 0x00FF00
         });
         this.maxLines = Math.max(6, this.adapter.rows);
-        this.adapter.enableCursor('underline', context.theme?.primary ?? 0x00FF00);
+        this.adapter.enableCursor('block', context.theme?.primary ?? 0x00FF00);
 
         this.reset();
     }
 
     reset() {
-        this.lines = [];
-        this.currentLineIdx = 0;
-        this.adapter.setText('');
+        this.lines = this.bootLog.slice(0, 4);
+        this.currentLineIdx = 4;
+        this.adapter.setLines(this.lines, false);
         this.state = 'booting';
         this.timer = 0;
         this.nextDelay = 0.14 + this.rng() * 0.12;
@@ -55,7 +55,16 @@ export class BootPlugin {
     }
 
     updateCursorPos() {
-        this.adapter.setCursorGrid(0, Math.min(this.lines.length, this.maxLines - 1));
+        if (this.lines.length === 0) {
+            this.adapter.setCursorGrid(0, 0);
+            return;
+        }
+        const lastRaw = this.lines[this.lines.length - 1] || '';
+        const plain = lastRaw.replace(/\{(primary|secondary|dim|peak|error|inverse)\}|\{\/\}/g, '');
+        this.adapter.setCursorGrid(
+            Math.min(this.adapter.cols - 2, plain.length + 1),
+            this.lines.length - 1
+        );
     }
 
     update(dt) {
