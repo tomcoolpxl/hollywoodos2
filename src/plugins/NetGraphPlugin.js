@@ -12,8 +12,9 @@ export class NetGraphPlugin {
         this.activeRoute = [];
         this.spawnTimer = 0;
         this.routeTimer = 0;
+        this.telemetryTimer = 0;
         this.pulseTime = 0;
-        this.statusLabel = null;
+        this.cornerLabels = {};
     }
 
     init(context) {
@@ -202,15 +203,53 @@ export class NetGraphPlugin {
             });
         }
 
-        this.statusLabel = this.adapter.createLabel(
-            `MESH TOPOLOGY // NODES: ${this.nodes.length}  LINKS: ${this.edges.length}  ACTIVE TRACE: INIT`,
-            {
-                fontSize: 10,
-                fill: this.theme.primary,
-                x: 8,
-                y: 6
-            }
-        );
+        const pad = 8;
+        this.cornerLabels = {
+            topLeft: this.adapter.createLabel(
+                `MESH TOPOLOGY // NODES: ${this.nodes.length}  LINKS: ${this.edges.length}\nBGP ASN: AS-64512 // PROTO: OSPF-V3\nTRACE: INIT`,
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.primary,
+                    x: pad,
+                    y: 6
+                }
+            ),
+            topRight: this.adapter.createLabel(
+                'THROUGHPUT: 14.82 Gbps\nPKT LOSS: 0.002%  RTT: 4.1ms\nENC: AES-256-GCM // ZERO-TRUST',
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.secondary,
+                    x: this.width - pad,
+                    y: 6,
+                    anchorX: 1,
+                    anchorY: 0
+                }
+            ),
+            bottomLeft: this.adapter.createLabel(
+                'CORE LOAD: [|||||||...] 68%\nIDS STATUS: NOMINAL // 0 BREACHES\nSUBNET: 10.240.0.0/16 [MASKED]',
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.secondary,
+                    x: pad,
+                    y: this.height - 42
+                }
+            ),
+            bottomRight: this.adapter.createLabel(
+                'ACTIVE FLOWS: 1,428 SESSIONS\nFIREWALL: STRICT DROP [INGRESS]\nHANDSHAKE: 00:00:01.42',
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.primary,
+                    x: this.width - pad,
+                    y: this.height - 42,
+                    anchorX: 1,
+                    anchorY: 0
+                }
+            )
+        };
 
         this.pickActiveRoute();
 
@@ -264,10 +303,13 @@ export class NetGraphPlugin {
         }
         this.activeRoute = path;
 
-        if (this.statusLabel && path.length >= 2) {
+        if (this.cornerLabels.topLeft && path.length >= 2) {
             const src = this.nodes[path[0]].name;
             const dst = this.nodes[path[path.length - 1]].name;
-            this.statusLabel.text = `TOPOLOGY: ${this.nodes.length} NODES / ${this.edges.length} LINKS // TRACE: ${src} -> ${dst} (${path.length - 1} HOPS)`;
+            this.cornerLabels.topLeft.text =
+                `MESH TOPOLOGY // NODES: ${this.nodes.length}  LINKS: ${this.edges.length}\n` +
+                `BGP ASN: AS-64512 // PROTO: OSPF-V3\n` +
+                `TRACE: ${src} -> ${dst} (${path.length - 1} HOPS)`;
         }
     }
 
@@ -289,6 +331,7 @@ export class NetGraphPlugin {
         this.pulseTime += dt;
         this.spawnTimer += dt;
         this.routeTimer += dt;
+        this.telemetryTimer += dt;
 
         if (this.spawnTimer >= 0.18 && this.packets.length < 24) {
             this.spawnTimer = 0;
@@ -298,6 +341,31 @@ export class NetGraphPlugin {
         if (this.routeTimer >= 3.5) {
             this.routeTimer = 0;
             this.pickActiveRoute();
+        }
+
+        if (this.telemetryTimer >= 0.45 && this.cornerLabels.topRight) {
+            this.telemetryTimer = 0;
+            const gbps = (13.4 + this.rng() * 2.8).toFixed(2);
+            const rtt = (3.6 + this.rng() * 1.4).toFixed(1);
+            const flows = 1380 + this.rng.int(0, 120);
+            const loadPct = 62 + this.rng.int(0, 18);
+            const bars = Math.round(loadPct / 10);
+            const barStr = '|'.repeat(bars) + '.'.repeat(10 - bars);
+
+            this.cornerLabels.topRight.text =
+                `THROUGHPUT: ${gbps} Gbps\n` +
+                `PKT LOSS: 0.002%  RTT: ${rtt}ms\n` +
+                `ENC: AES-256-GCM // ZERO-TRUST`;
+
+            this.cornerLabels.bottomLeft.text =
+                `CORE LOAD: [${barStr}] ${loadPct}%\n` +
+                `IDS STATUS: NOMINAL // 0 BREACHES\n` +
+                `SUBNET: 10.240.0.0/16 [MASKED]`;
+
+            this.cornerLabels.bottomRight.text =
+                `ACTIVE FLOWS: ${flows.toLocaleString()} SESSIONS\n` +
+                `FIREWALL: STRICT DROP [INGRESS]\n` +
+                `PKTS IN FLIGHT: ${this.packets.length} FRAMES`;
         }
 
         for (let i = this.packets.length - 1; i >= 0; i--) {
@@ -411,7 +479,7 @@ export class NetGraphPlugin {
         this.clusters = [];
         this.packets = [];
         this.activeRoute = [];
-        this.statusLabel = null;
+        this.cornerLabels = {};
         this.adapter = null;
     }
 }

@@ -59,9 +59,24 @@ export class SpectrumPlugin {
                 fontSize: 10,
                 fill: this.theme.secondary,
                 x: 0,
-                y: (this.height - 20) * (i / dbs.length)
+                y: 22 + (this.height - 40) * (i / dbs.length)
             });
         }
+
+        this.headerLeft = this.adapter.createLabel('FFT SPECTRUM // HANNING WINDOW 4096-PT', {
+            fontSize: 10,
+            fill: this.theme.primary,
+            x: 6,
+            y: 4
+        });
+        this.headerRight = this.adapter.createLabel('PEAK: -2.4 dBFS @ 2.0 kHz', {
+            fontSize: 10,
+            fill: this.theme.secondary,
+            x: this.width - 6,
+            y: 4,
+            anchorX: 1,
+            anchorY: 0
+        });
     }
 
     update(dt) {
@@ -72,6 +87,11 @@ export class SpectrumPlugin {
             for (let i = 0; i < this.barCount; i++) {
                 const change = (this.rng() - 0.5) * 0.3;
                 this.bars[i].target = Math.max(0.1, Math.min(0.92, this.bars[i].target + change));
+            }
+            if (this.headerRight) {
+                const db = (-1.2 - this.rng() * 5.8).toFixed(1);
+                const khz = (0.8 + this.rng() * 11.2).toFixed(1);
+                this.headerRight.text = `PEAK: ${db} dBFS @ ${khz} kHz`;
             }
         }
 

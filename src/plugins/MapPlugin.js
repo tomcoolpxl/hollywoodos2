@@ -8,6 +8,8 @@ export class MapPlugin {
         this.targets = [];
         this.scanAngle = 0;
         this.gridSize = 40;
+        this.cornerLabels = {};
+        this.telemetryTimer = 0;
     }
 
     init(context) {
@@ -47,6 +49,54 @@ export class MapPlugin {
                 label
             });
         }
+
+        const pad = 8;
+        this.cornerLabels = {
+            topLeft: this.adapter.createLabel(
+                `SECTOR: NORTH-ATLANTIC // GRID: ${this.gridSize}KM\nRADAR: AN/FPS-132 PHASED ARRAY\nCONTACTS: ${targetCount} TRACKED [IFF: ACTIVE]`,
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.primary,
+                    x: pad,
+                    y: 6
+                }
+            ),
+            topRight: this.adapter.createLabel(
+                'SWEEP: 000.0° MAG\nRANGE: 1,200 NM\nCLUTTER REJ: HIGH',
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.secondary,
+                    x: this.width - pad,
+                    y: 6,
+                    anchorX: 1,
+                    anchorY: 0
+                }
+            ),
+            bottomLeft: this.adapter.createLabel(
+                'DEFCON STATUS: LEVEL 3 // WATCHCON 2\nSAT-LINK: SYNCHRONIZED',
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.secondary,
+                    x: pad,
+                    y: this.height - 30
+                }
+            ),
+            bottomRight: this.adapter.createLabel(
+                'INTERCEPT VEC: STANDBY\nALT FLOOR: FL180',
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.primary,
+                    x: this.width - pad,
+                    y: this.height - 30,
+                    anchorX: 1,
+                    anchorY: 0
+                }
+            )
+        };
     }
 
     drawMapStatic() {
@@ -116,10 +166,23 @@ export class MapPlugin {
 
         g.circle(cx, cy, radius);
         g.stroke({ width: 1, color: this.theme.secondary, alpha: 0.8 });
+
+        this.telemetryTimer += dt;
+        if (this.telemetryTimer >= 0.25 && this.cornerLabels.topRight) {
+            this.telemetryTimer = 0;
+            const deg = ((this.scanAngle * 180) / Math.PI).toFixed(1).padStart(5, '0');
+            const lead = this.targets[0];
+            const brg = lead ? Math.round((Math.atan2(lead.y - cy, lead.x - cx) * 180) / Math.PI + 180) : 0;
+            this.cornerLabels.topRight.text =
+                `SWEEP: ${deg}° MAG\n` +
+                `RANGE: 1,200 NM\n` +
+                `PRIMARY BRG: ${brg}°`;
+        }
     }
 
     destroy() {
         this.targets = [];
+        this.cornerLabels = {};
         this.adapter = null;
     }
 }

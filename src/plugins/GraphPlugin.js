@@ -38,17 +38,27 @@ export class GraphPlugin {
             this.dataRAM.push(0.4);
         }
 
-        this.cpuLabel = this.adapter.createLabel('CPU: 30%', {
-            fontSize: 12,
+        this.cpuLabel = this.adapter.createLabel('CPU: 30% // CORES: 64 THREADS\nLOAD AVG: 1.42, 1.18, 0.94', {
+            fontSize: 10,
+            lineHeight: 13,
             fill: this.theme.primary,
-            x: 10,
-            y: 10
+            x: 8,
+            y: 6
         });
-        this.ramLabel = this.adapter.createLabel('MEM: 6.4GB', {
-            fontSize: 12,
+        this.ramLabel = this.adapter.createLabel('MEM: 6.4GB / 16.0GB [ECC]\nSWAP: 0.0GB // PAGE: 4KB', {
+            fontSize: 10,
+            lineHeight: 13,
             fill: this.theme.secondary,
-            x: 110,
-            y: 10
+            x: this.width - 8,
+            y: 6,
+            anchorX: 1,
+            anchorY: 0
+        });
+        this.footerLabel = this.adapter.createLabel('I/O BUS: NVMe-RAID0 4.2 GB/s   TEMP: 48.2°C   IRQ: 1,204/s', {
+            fontSize: 10,
+            fill: this.theme.secondary,
+            x: 8,
+            y: this.height - 16
         });
 
         this.drawStaticGrid();
@@ -98,8 +108,15 @@ export class GraphPlugin {
         if (this.dataCPU.length > this.maxPoints) this.dataCPU.shift();
         if (this.dataRAM.length > this.maxPoints) this.dataRAM.shift();
 
-        this.cpuLabel.text = `CPU: ${Math.floor(nextCPU * 100)}%`;
-        this.ramLabel.text = `MEM: ${(nextRAM * 16).toFixed(1)}GB`;
+        const load1 = (0.8 + nextCPU * 2.4).toFixed(2);
+        const load5 = (0.9 + nextCPU * 1.6).toFixed(2);
+        const temp = (44 + nextCPU * 28).toFixed(1);
+        const io = (2.1 + this.rng() * 3.8).toFixed(1);
+        this.cpuLabel.text = `CPU: ${Math.floor(nextCPU * 100)}% // CORES: 64 THREADS\nLOAD AVG: ${load1}, ${load5}, 0.94`;
+        this.ramLabel.text = `MEM: ${(nextRAM * 16).toFixed(1)}GB / 16.0GB [ECC]\nSWAP: 0.0GB // PAGE: 4KB`;
+        if (this.footerLabel) {
+            this.footerLabel.text = `I/O BUS: NVMe ${io} GB/s   TEMP: ${temp}°C   IRQ: ${1100 + this.rng.int(0, 450)}/s`;
+        }
     }
 
     renderGraph() {

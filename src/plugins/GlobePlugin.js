@@ -26,32 +26,36 @@ export class GlobePlugin {
 
         this.adapter = context.createFreeformAdapter();
 
-        const pad = 10;
+        const pad = 8;
         this.cornerTexts = [
-            this.adapter.createLabel('LAT: 00.00 N', {
+            this.adapter.createLabel('LAT: 34.12 N\nALT: 35,786 KM\nINCL: 23.44°', {
                 fontSize: 10,
+                lineHeight: 13,
                 fill: this.theme.primary,
                 x: pad,
                 y: pad
             }),
-            this.adapter.createLabel('LNG: 00.00 W', {
+            this.adapter.createLabel('LNG: 118.40 W\nAZIMUTH: 142.8°\nSYNC: GEO-LOCK', {
                 fontSize: 10,
-                fill: this.theme.primary,
+                lineHeight: 13,
+                fill: this.theme.secondary,
                 x: this.width - pad,
                 y: pad,
                 anchorX: 1,
                 anchorY: 0
             }),
-            this.adapter.createLabel('MODE: SCAN', {
+            this.adapter.createLabel('MODE: GLOBAL RADAR SCAN\nGRID: 12x16 GEODESIC', {
                 fontSize: 10,
-                fill: this.theme.primary,
+                lineHeight: 13,
+                fill: this.theme.secondary,
                 x: pad,
                 y: this.height - pad,
                 anchorX: 0,
                 anchorY: 1
             }),
-            this.adapter.createLabel('ZOOM: 1.0X', {
+            this.adapter.createLabel('ZOOM: 1.0X\nFOV: 45.0°', {
                 fontSize: 10,
+                lineHeight: 13,
                 fill: this.theme.primary,
                 x: this.width - pad,
                 y: this.height - pad,
@@ -113,11 +117,14 @@ export class GlobePlugin {
         this.rotation += dt * this.rotationSpeed;
         this.timer += dt;
 
-        if (this.timer >= 0.2) {
+        if (this.timer >= 0.35) {
             this.timer = 0;
-            this.cornerTexts[0].text = `LAT: ${(this.rng() * 90).toFixed(2)} N`;
-            this.cornerTexts[1].text = `LNG: ${(this.rng() * 180).toFixed(2)} W`;
-            this.cornerTexts[3].text = `ZOOM: ${(1.0 + this.rng()).toFixed(1)}X`;
+            const lat = (20 + this.rng() * 50).toFixed(2);
+            const lng = (60 + this.rng() * 110).toFixed(2);
+            const az = (((this.rotation * 180) / Math.PI) % 360).toFixed(1);
+            this.cornerTexts[0].text = `LAT: ${lat} N\nALT: 35,786 KM\nINCL: 23.44°`;
+            this.cornerTexts[1].text = `LNG: ${lng} W\nAZIMUTH: ${az}°\nSYNC: GEO-LOCK`;
+            this.cornerTexts[3].text = `ZOOM: ${(1.0 + this.rng() * 0.4).toFixed(1)}X\nFOV: 45.0°`;
         }
 
         this.render();

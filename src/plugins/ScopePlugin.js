@@ -12,7 +12,7 @@ export class ScopePlugin {
         this.freqB = 2.0;
         this.noiseAmp = 0.01;
         this.readoutTimer = 0;
-        this.labels = [];
+        this.labels = {};
     }
 
     init(context) {
@@ -32,20 +32,53 @@ export class ScopePlugin {
 
         this.drawGraticule();
 
-        this.labels = [
-            this.adapter.createLabel('CH1: 5.0V/DIV  TIME: 2.0ms', {
-                fontSize: 10,
-                fill: this.theme.primary,
-                x: 8,
-                y: 6
-            }),
-            this.adapter.createLabel('MODE: DUAL HARMONIC', {
-                fontSize: 10,
-                fill: this.theme.secondary,
-                x: 8,
-                y: this.height - 18
-            })
-        ];
+        const pad = 8;
+        this.labels = {
+            topLeft: this.adapter.createLabel(
+                'CH1: 5.0V/DIV  CH2: 2.5V/DIV  TIME: 2.0ms\nCARRIER: 421.80 MHz  PHASE: 0.00 rad\nSNR: +28.4 dB  THD: 0.041%  PLL: LOCKED',
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.primary,
+                    x: pad,
+                    y: 6
+                }
+            ),
+            topRight: this.adapter.createLabel(
+                'TRIG: AUTO [RISING +1.2V]\nSAMPLE: 2.4 GS/s  12-BIT\nFFT PEAK: 14.22 kHz',
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.secondary,
+                    x: this.width - pad,
+                    y: 6,
+                    anchorX: 1,
+                    anchorY: 0
+                }
+            ),
+            bottomLeft: this.adapter.createLabel(
+                `MODE: DUAL HARMONIC (${this.freqA}:${this.freqB})\nMOD: QPSK-ORTHOGONAL // SUB-CARRIER SYNC`,
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.secondary,
+                    x: pad,
+                    y: this.height - 30
+                }
+            ),
+            bottomRight: this.adapter.createLabel(
+                'Vpp: 9.84V   Vrms: 3.48V\nDELTA-T: 0.412ms  DUTY: 49.8%',
+                {
+                    fontSize: 10,
+                    lineHeight: 13,
+                    fill: this.theme.primary,
+                    x: this.width - pad,
+                    y: this.height - 30,
+                    anchorX: 1,
+                    anchorY: 0
+                }
+            )
+        };
 
         this.renderScope();
     }
@@ -92,16 +125,34 @@ export class ScopePlugin {
             this.mode = this.mode === 'wave' ? 'lissajous' : 'wave';
             this.freqA = 2 + this.rng.int(0, 4);
             this.freqB = 3 + this.rng.int(0, 4);
-            this.labels[1].text =
+            this.labels.bottomLeft.text =
                 this.mode === 'wave'
-                    ? `MODE: HARMONIC (${this.freqA}:${this.freqB})`
-                    : `MODE: LISSAJOUS XY (${this.freqA}:${this.freqB})`;
+                    ? `MODE: DUAL HARMONIC (${this.freqA}:${this.freqB})\nMOD: QPSK-ORTHOGONAL // SUB-CARRIER SYNC`
+                    : `MODE: LISSAJOUS XY (${this.freqA}:${this.freqB})\nVECTOR PHASE CORRELATION // ORTHO-LOCK`;
         }
 
-        if (this.readoutTimer >= 0.25) {
+        if (this.readoutTimer >= 0.3) {
             this.readoutTimer = 0;
-            const mhz = (420 + this.rng() * 8.5).toFixed(2);
-            this.labels[0].text = `CARRIER: ${mhz} MHz  PHASE: ${(this.phase % 6.28).toFixed(2)} rad`;
+            const mhz = (420 + this.rng() * 4.5).toFixed(2);
+            const snr = (27.8 + this.rng() * 1.4).toFixed(1);
+            const thd = (0.035 + this.rng() * 0.015).toFixed(3);
+            const vpp = (9.6 + this.rng() * 0.45).toFixed(2);
+            const vrms = (Number(vpp) * 0.3535).toFixed(2);
+            const fft = (14.1 + this.rng() * 0.35).toFixed(2);
+
+            this.labels.topLeft.text =
+                `CH1: 5.0V/DIV  CH2: 2.5V/DIV  TIME: 2.0ms\n` +
+                `CARRIER: ${mhz} MHz  PHASE: ${(this.phase % 6.28).toFixed(2)} rad\n` +
+                `SNR: +${snr} dB  THD: ${thd}%  PLL: LOCKED`;
+
+            this.labels.topRight.text =
+                `TRIG: AUTO [RISING +1.2V]\n` +
+                `SAMPLE: 2.4 GS/s  12-BIT\n` +
+                `FFT PEAK: ${fft} kHz`;
+
+            this.labels.bottomRight.text =
+                `Vpp: ${vpp}V   Vrms: ${vrms}V\n` +
+                `DELTA-T: 0.412ms  DUTY: ${(49.5 + this.rng() * 0.8).toFixed(1)}%`;
         }
 
         this.renderScope();
@@ -116,7 +167,7 @@ export class ScopePlugin {
 
         if (this.mode === 'wave') {
             const samples = 120;
-            const amp = this.height * 0.32;
+            const amp = this.height * 0.28;
 
             // Secondary harmonic carrier
             for (let i = 0; i <= samples; i++) {
@@ -146,8 +197,8 @@ export class ScopePlugin {
         } else {
             // Lissajous X-Y Phase Curve
             const steps = 160;
-            const rx = Math.min(this.width, this.height) * 0.36;
-            const ry = Math.min(this.width, this.height) * 0.36;
+            const rx = Math.min(this.width, this.height) * 0.32;
+            const ry = Math.min(this.width, this.height) * 0.32;
 
             for (let i = 0; i <= steps; i++) {
                 const t = (i / steps) * Math.PI * 2;
@@ -161,7 +212,7 @@ export class ScopePlugin {
     }
 
     destroy() {
-        this.labels = [];
+        this.labels = {};
         this.adapter = null;
     }
 }
