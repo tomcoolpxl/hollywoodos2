@@ -97,27 +97,39 @@ export class ConfigManager {
     }
 
     getTheme(themeName) {
-        const activeName = themeName || this.getGlobal().theme || 'classic-green';
+        const global = this.getGlobal();
+        const activeName = themeName || global.theme || 'classic-green';
+        const colorMode = global.colorMode || 'mono';
+        const isMono = colorMode !== 'color';
         const raw = this.config?.themes?.[activeName] || {
             primary: '0x00FF00',
             secondary: '0x00AA00',
             dim: '0x003300',
-            peak: '0x55FF55',
+            peak: '0x66FF66',
             bg: '0x000000',
             error: '0xFF3300'
         };
+        const primary = parseColor(raw.primary, 0x00FF00);
+        const secondary = parseColor(raw.secondary, 0x00AA00);
+        const dim = parseColor(raw.dim, 0x003300);
+        const peak = isMono ? primary : parseColor(raw.peak, 0x66FF66);
+        const bg = parseColor(raw.bg, 0x000000);
+        const error = isMono ? primary : parseColor(raw.error, 0xFF3300);
+
         return {
             name: activeName,
-            primary: parseColor(raw.primary, 0x00FF00),
-            secondary: parseColor(raw.secondary, 0x00AA00),
-            dim: parseColor(raw.dim, 0x003300),
-            peak: parseColor(raw.peak, 0x55FF55),
-            bg: parseColor(raw.bg, 0x000000),
-            error: parseColor(raw.error, 0xFF3300),
-            primaryHex: toHexColorString(raw.primary),
-            secondaryHex: toHexColorString(raw.secondary),
-            dimHex: toHexColorString(raw.dim),
-            peakHex: toHexColorString(raw.peak)
+            colorMode,
+            isMono,
+            primary,
+            secondary,
+            dim,
+            peak,
+            bg,
+            error,
+            primaryHex: toHexColorString(primary),
+            secondaryHex: toHexColorString(secondary),
+            dimHex: toHexColorString(dim),
+            peakHex: toHexColorString(peak)
         };
     }
 

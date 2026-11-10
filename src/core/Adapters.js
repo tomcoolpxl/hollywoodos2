@@ -40,6 +40,7 @@ export function getMonoCharWidth(fontSize = 14) {
 export function createRetroText(text = '', options = {}) {
     const fontSize = options.fontSize ?? 14;
     const fill = options.fill ?? 0x00FF00;
+    const fontWeight = options.fontWeight ?? 'normal';
     const lineHeight = options.lineHeight ?? Math.round(fontSize * 1.2);
     const wordWrap = options.wordWrap ?? false;
     const wordWrapWidth = options.wordWrapWidth ?? 400;
@@ -47,6 +48,7 @@ export function createRetroText(text = '', options = {}) {
     const style = new TextStyle({
         fontFamily: 'Consolas, "Courier New", monospace',
         fontSize,
+        fontWeight,
         fill,
         lineHeight,
         wordWrap,
@@ -151,21 +153,42 @@ export class GridAdapter {
         this.container.addChild(this.scrollContainer);
     }
 
-    resolveTagColor(tag) {
+    resolveTagStyle(tag) {
+        const isMono = (this.theme.colorMode || 'mono') !== 'color';
+        const primary = this.theme.primary ?? this.color;
+
+        if (isMono) {
+            switch (tag) {
+                case 'peak':
+                    return { fill: primary, fontWeight: 'bold', alpha: 1.0, underline: false };
+                case 'error':
+                    return { fill: primary, fontWeight: 'bold', alpha: 1.0, underline: true };
+                case 'secondary':
+                    return { fill: primary, fontWeight: 'normal', alpha: 0.68, underline: false };
+                case 'dim':
+                    return { fill: primary, fontWeight: 'normal', alpha: 0.45, underline: false };
+                case 'inverse':
+                    return { fill: this.theme.bg ?? 0x000000, fontWeight: 'bold', alpha: 1.0, underline: false };
+                case 'primary':
+                default:
+                    return { fill: primary, fontWeight: 'normal', alpha: 1.0, underline: false };
+            }
+        }
+
         switch (tag) {
             case 'peak':
-                return this.theme.peak ?? 0x55FF55;
+                return { fill: this.theme.peak ?? 0x66FF66, fontWeight: 'bold', alpha: 1.0, underline: false };
             case 'secondary':
-                return this.theme.secondary ?? 0x00AA00;
+                return { fill: this.theme.secondary ?? 0x00AA00, fontWeight: 'normal', alpha: 1.0, underline: false };
             case 'dim':
-                return this.theme.dim ?? 0x005500;
+                return { fill: this.theme.dim ?? 0x005500, fontWeight: 'normal', alpha: 1.0, underline: false };
             case 'error':
-                return this.theme.error ?? 0xFF3300;
+                return { fill: this.theme.error ?? 0xFF3300, fontWeight: 'bold', alpha: 1.0, underline: true };
             case 'inverse':
-                return this.theme.bg ?? 0x000000;
+                return { fill: this.theme.bg ?? 0x000000, fontWeight: 'bold', alpha: 1.0, underline: false };
             case 'primary':
             default:
-                return this.theme.primary ?? this.color;
+                return { fill: primary, fontWeight: 'normal', alpha: 1.0, underline: false };
         }
     }
 
@@ -182,12 +205,18 @@ export class GridAdapter {
                 const span = spans[s];
                 const x = span.col * this.charWidth;
                 const y = row * this.lineHeight;
+                const tagStyle = this.resolveTagStyle(span.tag);
 
                 if (span.tag === 'inverse') {
                     const bgW = span.text.length * this.charWidth;
                     this.ansiBgGraphics
                         .rect(x, y, bgW, this.lineHeight)
                         .fill(this.theme.primary ?? this.color);
+                } else if (tagStyle.underline) {
+                    const bgW = span.text.length * this.charWidth;
+                    this.ansiBgGraphics
+                        .rect(x, y + this.lineHeight - 2, bgW, 1.5)
+                        .fill(tagStyle.fill);
                 }
 
                 let spanTextObj = this.spanPool[activeSpans];
@@ -203,7 +232,9 @@ export class GridAdapter {
 
                 spanTextObj.visible = true;
                 spanTextObj.text = span.text;
-                spanTextObj.style.fill = this.resolveTagColor(span.tag);
+                spanTextObj.style.fill = tagStyle.fill;
+                spanTextObj.style.fontWeight = tagStyle.fontWeight;
+                spanTextObj.alpha = tagStyle.alpha;
                 spanTextObj.x = Math.round(x);
                 spanTextObj.y = Math.round(y);
                 activeSpans++;

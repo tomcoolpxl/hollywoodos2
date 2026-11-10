@@ -1,3 +1,5 @@
+import { WORLD_COASTLINES, projectEquirectangular } from '../core/WorldMapData.js';
+
 export class MapPlugin {
     constructor() {
         this.adapter = null;
@@ -28,23 +30,28 @@ export class MapPlugin {
         this.adapter = context.createFreeformAdapter();
         this.drawMapStatic();
 
+        const minX = 36;
+        const maxX = Math.max(60, this.width - 75);
+        const minY = 54;
+        const maxY = Math.max(80, this.height - 46);
+
         this.targets = [];
         for (let i = 0; i < targetCount; i++) {
             const id = `TRGT-${this.rng.int(1000, 9999)}`;
-            const x = this.rng.range(20, Math.max(40, this.width - 20));
-            const y = this.rng.range(20, Math.max(40, this.height - 20));
+            const x = this.rng.range(minX, maxX);
+            const y = this.rng.range(minY, maxY);
             const label = this.adapter.createLabel(id, {
-                fontSize: 10,
+                fontSize: 9,
                 fill: this.theme.primary,
-                x: x + 6,
+                x: x + 7,
                 y: y - 6
             });
 
             this.targets.push({
                 x,
                 y,
-                vx: (this.rng() - 0.5) * 55,
-                vy: (this.rng() - 0.5) * 55,
+                vx: (this.rng() - 0.5) * 42,
+                vy: (this.rng() - 0.5) * 42,
                 id,
                 label
             });
@@ -53,7 +60,7 @@ export class MapPlugin {
         const pad = 8;
         this.cornerLabels = {
             topLeft: this.adapter.createLabel(
-                `SECTOR: NORTH-ATLANTIC // GRID: ${this.gridSize}KM\nRADAR: AN/FPS-132 PHASED ARRAY\nCONTACTS: ${targetCount} TRACKED [IFF: ACTIVE]`,
+                `SECTOR: GLOBAL THEATER // WGS-84\nRADAR: AN/FPS-132 PHASED ARRAY\nCONTACTS: ${targetCount} TRACKED [IFF: ACTIVE]`,
                 {
                     fontSize: 10,
                     lineHeight: 13,
@@ -103,69 +110,95 @@ export class MapPlugin {
         const g = this.adapter.bgGraphics;
         g.clear();
 
-        // 1. Build background grid geometry first, then stroke (PixiJS v8)
-        for (let x = 0; x <= this.width; x += this.gridSize) {
+        // 1. Background 30-degree Lat/Lon Graticule
+        const cols = 12;
+        const rows = 6;
+        for (let i = 1; i < cols; i++) {
+            const x = (this.width / cols) * i;
             g.moveTo(x, 0);
             g.lineTo(x, this.height);
         }
-        for (let y = 0; y <= this.height; y += this.gridSize) {
+        for (let j = 1; j < rows; j++) {
+            const y = (this.height / rows) * j;
             g.moveTo(0, y);
             g.lineTo(this.width, y);
         }
-        g.stroke({ width: 1, color: this.theme.dim });
+        g.stroke({ width: 1, color: this.theme.dim, alpha: 0.55 });
 
-        // 2. Build wireframe continents geometry, then stroke (PixiJS v8)
-        g.moveTo(this.width * 0.16, this.height * 0.28);
-        g.lineTo(this.width * 0.38, this.height * 0.18);
-        g.lineTo(this.width * 0.48, this.height * 0.48);
-        g.lineTo(this.width * 0.28, this.height * 0.62);
-        g.closePath();
+        // 2. High-resolution geographic world coastlines (WGS-84 Equirectangular)
+        for (const poly of WORLD_COASTLINES) {
+            for (let i = 0; i < poly.length; i++) {
+                const { x, y } = projectEquirectangular(poly[i][0], poly[i][1], this.width, this.height);
+                if (i === 0) g.moveTo(x, y);
+                else g.lineTo(x, y);
+            }
+        }
+        g.stroke({ width: 1.4, color: this.theme.secondary, alpha: 0.8 });
 
-        g.moveTo(this.width * 0.58, this.height * 0.52);
-        g.lineTo(this.width * 0.82, this.height * 0.42);
-        g.lineTo(this.width * 0.88, this.height * 0.78);
-        g.lineTo(this.width * 0.66, this.height * 0.86);
-        g.closePath();
-        g.stroke({ width: 2, color: this.theme.secondary });
+        // 3. Concentric Radar Range Rings & Crosshairs
+        const rcx = this.width / 2;
+        const rcy = this.height / 2;
+        const maxR = Math.min(this.width, this.height) * 0.41;
+
+        g.circle(rcx, rcy, maxR * 0.33);
+        g.circle(rcx, rcy, maxR * 0.66);
+        g.moveTo(0, rcy);
+        g.lineTo(this.width, rcy);
+        g.moveTo(rcx, 0);
+        g.lineTo(rcx, this.height);
+        g.stroke({ width: 1, color: this.theme.dim, alpha: 0.75 });
     }
 
     update(dt) {
         const g = this.adapter.graphics;
         g.clear();
 
-        // 1. Update & build all target circles + velocity vectors, then stroke (PixiJS v8)
+        const minX = 28;
+        const maxX = Math.max(60, this.width - 72);
+        const minY = 52;
+        const maxY = Math.max(80, this.height - 42);
+
+        // 1. Update & build all target reticles + velocity vectors
         for (const t of this.targets) {
             t.x += t.vx * dt;
             t.y += t.vy * dt;
 
-            if (t.x < 6) { t.x = 6; t.vx *= -1; }
-            if (t.x > this.width - 6) { t.x = this.width - 6; t.vx *= -1; }
-            if (t.y < 6) { t.y = 6; t.vy *= -1; }
-            if (t.y > this.height - 6) { t.y = this.height - 6; t.vy *= -1; }
+            if (t.x < minX) { t.x = minX; t.vx *= -1; }
+            if (t.x > maxX) { t.x = maxX; t.vx *= -1; }
+            if (t.y < minY) { t.y = minY; t.vy *= -1; }
+            if (t.y > maxY) { t.y = maxY; t.vy *= -1; }
 
-            g.circle(t.x, t.y, 4);
+            g.circle(t.x, t.y, 3.5);
+            g.rect(t.x - 6, t.y - 6, 12, 12);
             g.moveTo(t.x, t.y);
-            g.lineTo(t.x + t.vx * 0.45, t.y + t.vy * 0.45);
+            g.lineTo(t.x + t.vx * 0.55, t.y + t.vy * 0.55);
 
             if (t.label) {
-                t.label.x = Math.min(this.width - 62, t.x + 6);
-                t.label.y = Math.max(2, t.y - 6);
+                t.label.x = Math.min(this.width - 68, t.x + 8);
+                t.label.y = Math.max(46, t.y - 6);
             }
         }
         g.stroke({ width: 1, color: this.theme.primary });
 
-        // 2. Radar Sweep Line + Outer Ring (PixiJS v8 build-then-stroke)
-        this.scanAngle = (this.scanAngle + dt * 2.0) % (Math.PI * 2);
+        // 2. Radar Sweep Line, Trailing Echo Fan & Outer Ring
+        this.scanAngle = (this.scanAngle + dt * 1.35) % (Math.PI * 2);
         const cx = this.width / 2;
         const cy = this.height / 2;
-        const radius = Math.min(this.width, this.height) * 0.4;
+        const radius = Math.min(this.width, this.height) * 0.41;
+
+        for (let i = 1; i <= 4; i++) {
+            const trailAng = this.scanAngle - i * 0.08;
+            g.moveTo(cx, cy);
+            g.lineTo(cx + Math.cos(trailAng) * radius, cy + Math.sin(trailAng) * radius);
+        }
+        g.stroke({ width: 1, color: this.theme.secondary, alpha: 0.3 });
 
         g.moveTo(cx, cy);
         g.lineTo(cx + Math.cos(this.scanAngle) * radius, cy + Math.sin(this.scanAngle) * radius);
-        g.stroke({ width: 2, color: this.theme.peak, alpha: 0.65 });
+        g.stroke({ width: 2, color: this.theme.peak, alpha: 0.8 });
 
         g.circle(cx, cy, radius);
-        g.stroke({ width: 1, color: this.theme.secondary, alpha: 0.8 });
+        g.stroke({ width: 1.5, color: this.theme.secondary, alpha: 0.85 });
 
         this.telemetryTimer += dt;
         if (this.telemetryTimer >= 0.25 && this.cornerLabels.topRight) {

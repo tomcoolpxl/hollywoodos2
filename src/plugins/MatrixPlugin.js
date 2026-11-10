@@ -30,6 +30,11 @@ export class MatrixPlugin {
 
         // PixiJS v8 FillGradient uses `colorStops` and end.x = 0.12 so multi-line Text
         // stretches the gradient across the full column height rather than per-line.
+        const headColor =
+            this.theme.isMono !== false
+                ? this.theme.primary
+                : (this.theme.peak ?? 0xFFFFFF);
+
         const gradient = new FillGradient({
             type: 'linear',
             start: { x: 0, y: 0 },
@@ -37,8 +42,8 @@ export class MatrixPlugin {
             textureSpace: 'local',
             colorStops: [
                 { offset: 0.0, color: this.theme.dim },
-                { offset: 0.72, color: this.theme.primary },
-                { offset: 1.0, color: 0xFFFFFF }
+                { offset: 0.72, color: this.theme.secondary ?? this.theme.primary },
+                { offset: 1.0, color: headColor }
             ]
         });
 
@@ -56,19 +61,22 @@ export class MatrixPlugin {
     }
 
     createColumn(index) {
-        const speed = 100 + this.rng() * 200;
-        const trailLength = this.rng.int(5, 19);
+        const speed = 100 + this.rng() * 180;
+        const trailLength = this.rng.int(6, 19);
 
         const contentArr = [];
         for (let j = 0; j < trailLength; j++) {
             contentArr.push(this.getRandomChar());
         }
 
+        const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
         const textObj = new Text({
             text: contentArr.join('\n'),
-            style: this.sharedStyle
+            style: this.sharedStyle,
+            resolution: Math.min(3, Math.max(2, dpr * 1.5)),
+            roundPixels: true
         });
-        textObj.x = index * this.charWidth;
+        textObj.x = Math.round(index * this.charWidth);
         textObj.y = this.rng() * this.height * 1.5 - this.height;
 
         this.container.addChild(textObj);
@@ -97,7 +105,7 @@ export class MatrixPlugin {
 
             if (col.obj.y > resetThreshold) {
                 col.obj.y = -(col.trailLength * this.fontSize) - this.rng() * 200;
-                col.speed = 100 + this.rng() * 200;
+                col.speed = 100 + this.rng() * 180;
             }
 
             col.flickerTimer += dt;

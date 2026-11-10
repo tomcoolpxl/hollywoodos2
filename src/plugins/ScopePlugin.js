@@ -7,11 +7,12 @@ export class ScopePlugin {
         this.theme = null;
         this.phase = 0;
         this.modeTimer = 0;
+        this.packetTimer = 0;
         this.mode = 'wave'; // 'wave' | 'lissajous'
         this.freqA = 3.0;
         this.freqB = 2.0;
-        this.noiseAmp = 0.01;
         this.readoutTimer = 0;
+        this.packets = [];
         this.labels = {};
     }
 
@@ -30,6 +31,7 @@ export class ScopePlugin {
         this.freqA = 2.0 + this.rng.int(0, 3);
         this.freqB = 3.0 + this.rng.int(0, 3);
 
+        this.generateWavePackets();
         this.drawGraticule();
 
         const pad = 8;
@@ -45,7 +47,7 @@ export class ScopePlugin {
                 }
             ),
             topRight: this.adapter.createLabel(
-                'TRIG: AUTO [RISING +1.2V]\nSAMPLE: 2.4 GS/s  12-BIT\nFFT PEAK: 14.22 kHz',
+                'TRIG: AUTO [PULSE +1.2V]\nSAMPLE: 2.4 GS/s  12-BIT\nBURST LEN: 142 us',
                 {
                     fontSize: 10,
                     lineHeight: 13,
@@ -57,7 +59,7 @@ export class ScopePlugin {
                 }
             ),
             bottomLeft: this.adapter.createLabel(
-                `MODE: DUAL HARMONIC (${this.freqA}:${this.freqB})\nMOD: QPSK-ORTHOGONAL // SUB-CARRIER SYNC`,
+                'MODE: CHIRP-BURST TELEMETRY\nMOD: BPSK/QPSK PACKET ENVELOPE // SYNC',
                 {
                     fontSize: 10,
                     lineHeight: 13,
@@ -81,6 +83,36 @@ export class ScopePlugin {
         };
 
         this.renderScope();
+    }
+
+    generateWavePackets() {
+        // Non-uniform modulated wave-packets (center 0..1, width, carrier freq, chirp rate, amp, phase flip)
+        this.packets = [
+            {
+                center: 0.16 + this.rng() * 0.08,
+                width: 0.055 + this.rng() * 0.04,
+                freq: 9 + this.rng.int(0, 8),
+                chirp: 14 + this.rng() * 12,
+                amp: 0.65 + this.rng() * 0.35,
+                phaseFlip: this.rng() * Math.PI
+            },
+            {
+                center: 0.46 + this.rng() * 0.1,
+                width: 0.075 + this.rng() * 0.05,
+                freq: 14 + this.rng.int(0, 12),
+                chirp: -18 + this.rng() * 36,
+                amp: 0.75 + this.rng() * 0.25,
+                phaseFlip: this.rng() * Math.PI
+            },
+            {
+                center: 0.78 + this.rng() * 0.08,
+                width: 0.045 + this.rng() * 0.045,
+                freq: 7 + this.rng.int(0, 10),
+                chirp: 20 + this.rng() * 15,
+                amp: 0.55 + this.rng() * 0.4,
+                phaseFlip: this.rng() * Math.PI
+            }
+        ];
     }
 
     drawGraticule() {
@@ -116,9 +148,22 @@ export class ScopePlugin {
     }
 
     update(dt) {
-        this.phase += dt * 0.8;
+        this.phase += dt * 0.85;
         this.modeTimer += dt;
+        this.packetTimer += dt;
         this.readoutTimer += dt;
+
+        // Slowly drift packet envelopes & modulate amplitudes so waveform is organic and non-repetitive
+        for (const pkt of this.packets) {
+            pkt.center = (pkt.center + dt * 0.035) % 1.0;
+        }
+        if (this.packetTimer >= 2.4) {
+            this.packetTimer = 0;
+            const targetPkt = this.rng.pick(this.packets);
+            targetPkt.freq = 6 + this.rng.int(0, 14);
+            targetPkt.amp = 0.45 + this.rng() * 0.55;
+            targetPkt.width = 0.04 + this.rng() * 0.065;
+        }
 
         if (this.modeTimer >= 10.0) {
             this.modeTimer = 0;
@@ -127,8 +172,8 @@ export class ScopePlugin {
             this.freqB = 3 + this.rng.int(0, 4);
             this.labels.bottomLeft.text =
                 this.mode === 'wave'
-                    ? `MODE: DUAL HARMONIC (${this.freqA}:${this.freqB})\nMOD: QPSK-ORTHOGONAL // SUB-CARRIER SYNC`
-                    : `MODE: LISSAJOUS XY (${this.freqA}:${this.freqB})\nVECTOR PHASE CORRELATION // ORTHO-LOCK`;
+                    ? 'MODE: CHIRP-BURST TELEMETRY\nMOD: BPSK/QPSK PACKET ENVELOPE // SYNC'
+                    : `MODE: VECTOR PHASE CONSTELLATION (${this.freqA}:${this.freqB})\nORTHOGONAL HARMONIC CORRELATOR`;
         }
 
         if (this.readoutTimer >= 0.3) {
@@ -138,7 +183,7 @@ export class ScopePlugin {
             const thd = (0.035 + this.rng() * 0.015).toFixed(3);
             const vpp = (9.6 + this.rng() * 0.45).toFixed(2);
             const vrms = (Number(vpp) * 0.3535).toFixed(2);
-            const fft = (14.1 + this.rng() * 0.35).toFixed(2);
+            const burst = 110 + this.rng.int(0, 75);
 
             this.labels.topLeft.text =
                 `CH1: 5.0V/DIV  CH2: 2.5V/DIV  TIME: 2.0ms\n` +
@@ -146,9 +191,9 @@ export class ScopePlugin {
                 `SNR: +${snr} dB  THD: ${thd}%  PLL: LOCKED`;
 
             this.labels.topRight.text =
-                `TRIG: AUTO [RISING +1.2V]\n` +
+                `TRIG: AUTO [PULSE +1.2V]\n` +
                 `SAMPLE: 2.4 GS/s  12-BIT\n` +
-                `FFT PEAK: ${fft} kHz`;
+                `BURST LEN: ${burst} us`;
 
             this.labels.bottomRight.text =
                 `Vpp: ${vpp}V   Vrms: ${vrms}V\n` +
@@ -166,52 +211,92 @@ export class ScopePlugin {
         const cy = this.height / 2;
 
         if (this.mode === 'wave') {
-            const samples = 120;
-            const amp = this.height * 0.28;
+            const samples = 180;
+            const amp = this.height * 0.30;
 
-            // Secondary harmonic carrier
+            // CH2: Stepped digital clock / BPSK sync envelope trace (secondary trace)
             for (let i = 0; i <= samples; i++) {
                 const t = i / samples;
                 const x = t * this.width;
-                const y =
-                    cy +
-                    Math.sin(t * Math.PI * 2 * this.freqB - this.phase * 0.7) * (amp * 0.55);
+                const gate =
+                    Math.sin(t * 19.0 - this.phase * 0.9) *
+                    Math.cos(t * 7.0 + this.phase * 0.4);
+                const squareStep = gate > 0.22 ? 0.38 : gate < -0.22 ? -0.38 : 0.0;
+                const y = cy + squareStep * amp;
                 if (i === 0) g.moveTo(x, y);
                 else g.lineTo(x, y);
             }
-            g.stroke({ width: 1.5, color: this.theme.secondary, alpha: 0.7 });
+            g.stroke({ width: 1, color: this.theme.secondary, alpha: 0.6 });
 
-            // Primary composite signal
+            // CH1: Non-periodic chirp wave-packet bursts + transient spikes + baseline noise
             for (let i = 0; i <= samples; i++) {
                 const t = i / samples;
                 const x = t * this.width;
-                const jitter = (this.rng() - 0.5) * this.noiseAmp * amp;
-                const wave =
-                    Math.sin(t * Math.PI * 2 * this.freqA + this.phase) * 0.65 +
-                    Math.cos(t * Math.PI * 2 * (this.freqB * 1.5) - this.phase * 1.3) * 0.35;
-                const y = cy + wave * amp + jitter;
+
+                // Baseline irregular multi-frequency carrier + noise floor
+                let signal =
+                    Math.sin(t * 11.0 + this.phase) *
+                    Math.sin(t * 3.7 - this.phase * 0.6) *
+                    0.18 +
+                    (this.rng() - 0.5) * 0.05;
+
+                // Superimpose localized chirp bursts & phase-flipped wave packets
+                for (const pkt of this.packets) {
+                    let d = t - pkt.center;
+                    if (d > 0.5) d -= 1.0;
+                    if (d < -0.5) d += 1.0;
+
+                    const env = Math.exp(-(d * d) / (2 * pkt.width * pkt.width));
+                    if (env > 0.01) {
+                        const instPhase =
+                            d * pkt.freq * Math.PI * 2 +
+                            d * d * pkt.chirp * Math.PI +
+                            this.phase * 1.4 +
+                            pkt.phaseFlip;
+                        // Asymmetric harmonic distortion inside burst
+                        const carrier =
+                            Math.sin(instPhase) * 0.75 +
+                            Math.sin(instPhase * 2.3 + 0.8) * 0.25;
+                        signal += env * pkt.amp * carrier;
+                    }
+                }
+
+                signal = Math.max(-1.05, Math.min(1.05, signal));
+                const y = cy + signal * amp;
                 if (i === 0) g.moveTo(x, y);
                 else g.lineTo(x, y);
             }
-            g.stroke({ width: 2, color: this.theme.primary });
+            g.stroke({ width: 1.8, color: this.theme.primary });
         } else {
-            // Lissajous X-Y Phase Curve
-            const steps = 160;
-            const rx = Math.min(this.width, this.height) * 0.32;
-            const ry = Math.min(this.width, this.height) * 0.32;
+            // Modulated multi-lobe damped vector phase constellation
+            const steps = 200;
+            const maxR = Math.min(this.width, this.height) * 0.34;
 
             for (let i = 0; i <= steps; i++) {
-                const t = (i / steps) * Math.PI * 2;
-                const x = cx + Math.sin(this.freqA * t + this.phase * 0.6) * rx;
-                const y = cy + Math.sin(this.freqB * t) * ry;
+                const u = i / steps;
+                const t = u * Math.PI * 4;
+                const modEnv = 0.55 + 0.45 * Math.cos(u * Math.PI * 3 - this.phase * 0.8);
+                const x =
+                    cx +
+                    (Math.sin(this.freqA * t + this.phase * 0.5) * 0.78 +
+                        Math.cos((this.freqB + 1) * t - this.phase * 0.3) * 0.22) *
+                        maxR *
+                        modEnv;
+                const y =
+                    cy +
+                    (Math.sin(this.freqB * t) * 0.78 +
+                        Math.sin((this.freqA + 2) * t + this.phase * 0.4) * 0.22) *
+                        maxR *
+                        modEnv;
                 if (i === 0) g.moveTo(x, y);
                 else g.lineTo(x, y);
             }
-            g.stroke({ width: 2, color: this.theme.primary });
+            g.stroke({ width: 1.8, color: this.theme.primary });
         }
     }
 
     destroy() {
+        this.packets = [];
         this.labels = {};
         this.adapter = null;
     }

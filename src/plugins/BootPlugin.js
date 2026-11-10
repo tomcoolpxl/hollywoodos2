@@ -4,22 +4,28 @@ export class BootPlugin {
         this.rng = null;
         this.lines = [];
         this.timer = 0;
-        this.nextDelay = 0.25;
+        this.nextDelay = 0.2;
         this.state = 'booting';
         this.bootLog = [
-            'BIOS DATE 01/01/99 14:22:51 {secondary}VER 1.02{/}',
-            'CPU: NEC V20, SPEED: {peak}8 MHz{/}',
-            '640K RAM SYSTEM {peak}OK{/}',
-            'INITIALIZING VIDEO ADAPTER...',
-            'VIDEO ADAPTER {peak}INITIALIZED{/}',
-            'LOADING OS...',
-            'MOUNTING DISK A: ... {error}FAILED{/}',
-            'MOUNTING DISK C: ... {peak}OK{/}',
-            'READING SECTOR {secondary}0x000{/}...',
-            'EXECUTING BOOTSTRAP...',
-            '{inverse} SYSTEM READY. {/}'
+            'BIOS DATE 01/01/99 14:22:51 {secondary}VER 4.02-MIL{/}',
+            'CPU: DUAL TACTICAL RISC @ {peak}1.20 GHz{/} [SMP-OK]',
+            'MEMORY TEST: 16,777,216K {peak}OK [ECC ENABLED]{/}',
+            'INITIALIZING IOMMU & DMA PROTECTION... {peak}DONE{/}',
+            'PCIe BUS 00:01.0 -> CRYPTO ACCELERATOR {peak}[ONLINE]{/}',
+            'PCIe BUS 00:02.0 -> VECTOR DISPLAY DSP {peak}[ONLINE]{/}',
+            'PCIe BUS 00:04.0 -> SATCOM UPLINK NIC  {peak}[ONLINE]{/}',
+            'MOUNTING /dev/nvme0n1p1 (ROOTFS)... {peak}OK{/}',
+            'MOUNTING /dev/sda1 (LEGACY ARCHIVE)... {error}READ-ONLY{/}',
+            'LOADING KERNEL IMAGE: /boot/vmlinuz-hollywood-sec...',
+            'VERIFYING RSA-4096 KERNEL SIGNATURE... {peak}VALID{/}',
+            'STARTING SUBSYSTEM: NETFILTER_ZERO_TRUST... {peak}OK{/}',
+            'STARTING SUBSYSTEM: ORBITAL_TELEMETRY_DAEMON... {peak}OK{/}',
+            'CALIBRATING PHASE-LOCKED LOOP... {secondary}0x004F00{/}',
+            'ESTABLISHING ENCRYPTED MESH TUNNEL...',
+            '{inverse} SYSTEM READY // OPERATOR TERMINAL ACTIVE {/}'
         ];
         this.currentLineIdx = 0;
+        this.maxLines = 20;
     }
 
     init(context) {
@@ -32,6 +38,7 @@ export class BootPlugin {
             lineHeight,
             color: context.theme?.primary ?? 0x00FF00
         });
+        this.maxLines = Math.max(6, this.adapter.rows);
         this.adapter.enableCursor('underline', context.theme?.primary ?? 0x00FF00);
 
         this.reset();
@@ -43,12 +50,12 @@ export class BootPlugin {
         this.adapter.setText('');
         this.state = 'booting';
         this.timer = 0;
-        this.nextDelay = 0.2 + this.rng() * 0.15;
+        this.nextDelay = 0.14 + this.rng() * 0.12;
         this.updateCursorPos();
     }
 
     updateCursorPos() {
-        this.adapter.setCursorGrid(0, this.lines.length);
+        this.adapter.setCursorGrid(0, Math.min(this.lines.length, this.maxLines - 1));
     }
 
     update(dt) {
@@ -57,9 +64,12 @@ export class BootPlugin {
         if (this.state === 'booting') {
             if (this.timer >= this.nextDelay) {
                 this.timer = 0;
-                this.nextDelay = 0.2 + this.rng() * 0.15;
+                this.nextDelay = 0.14 + this.rng() * 0.14;
                 if (this.currentLineIdx < this.bootLog.length) {
                     this.lines.push(this.bootLog[this.currentLineIdx]);
+                    if (this.lines.length > this.maxLines) {
+                        this.lines.shift();
+                    }
                     this.currentLineIdx++;
                     this.adapter.setLines(this.lines, false);
                     this.updateCursorPos();

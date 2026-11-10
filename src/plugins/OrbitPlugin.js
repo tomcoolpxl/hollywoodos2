@@ -1,3 +1,5 @@
+import { WORLD_COASTLINES, projectEquirectangular } from '../core/WorldMapData.js';
+
 export class OrbitPlugin {
     constructor() {
         this.adapter = null;
@@ -24,11 +26,12 @@ export class OrbitPlugin {
 
         this.adapter = context.createFreeformAdapter();
 
+        // Real-world ground station coordinates [lon, lat]
         this.stations = [
-            { name: 'GS-PINE-GAP', u: 0.82, v: 0.68 },
-            { name: 'GS-MENWITH', u: 0.48, v: 0.28 },
-            { name: 'GS-THULE', u: 0.32, v: 0.16 },
-            { name: 'GS-DIEGO', u: 0.68, v: 0.56 }
+            { name: 'GS-PINE-GAP', lon: 133.74, lat: -23.80 },
+            { name: 'GS-MENWITH', lon: -1.68, lat: 54.00 },
+            { name: 'GS-THULE', lon: -68.70, lat: 76.53 },
+            { name: 'GS-DIEGO', lon: 72.42, lat: -7.31 }
         ];
 
         this.drawWorldGrid();
@@ -43,7 +46,8 @@ export class OrbitPlugin {
             const label = this.adapter.createLabel(`${def.name}\nALT:${def.alt}KM`, {
                 fontSize: 9,
                 lineHeight: 11,
-                fill: this.theme.peak,
+                fill: this.theme.primary,
+                fontWeight: 'bold',
                 x: 10,
                 y: 10
             });
@@ -55,8 +59,7 @@ export class OrbitPlugin {
         });
 
         for (const st of this.stations) {
-            const sx = st.u * this.width;
-            const sy = st.v * this.height;
+            const { x: sx, y: sy } = projectEquirectangular(st.lon, st.lat, this.width, this.height);
             this.adapter.createLabel(st.name, {
                 fontSize: 9,
                 fill: this.theme.secondary,
@@ -120,6 +123,7 @@ export class OrbitPlugin {
         const bg = this.adapter.bgGraphics;
         bg.clear();
 
+        // 1. Lat/Lon coordinate grid (every 30 degrees)
         const cols = 12;
         const rows = 6;
         for (let i = 1; i < cols; i++) {
@@ -132,22 +136,32 @@ export class OrbitPlugin {
             bg.moveTo(0, y);
             bg.lineTo(this.width, y);
         }
-        bg.stroke({ width: 1, color: this.theme.dim });
+        bg.stroke({ width: 1, color: this.theme.dim, alpha: 0.6 });
 
-        // Equator line
+        // 2. High-resolution geographic world coastlines behind orbital paths
+        for (const poly of WORLD_COASTLINES) {
+            for (let i = 0; i < poly.length; i++) {
+                const { x, y } = projectEquirectangular(poly[i][0], poly[i][1], this.width, this.height);
+                if (i === 0) bg.moveTo(x, y);
+                else bg.lineTo(x, y);
+            }
+        }
+        bg.stroke({ width: 1, color: this.theme.secondary, alpha: 0.45 });
+
+        // 3. Equator line
         const eqY = this.height / 2;
         bg.moveTo(0, eqY);
         bg.lineTo(this.width, eqY);
         bg.stroke({ width: 1, color: this.theme.secondary, alpha: 0.65 });
 
-        // Ground station crosshairs
+        // 4. Ground station crosshairs & range rings
         for (const st of this.stations) {
-            const sx = st.u * this.width;
-            const sy = st.v * this.height;
+            const { x: sx, y: sy } = projectEquirectangular(st.lon, st.lat, this.width, this.height);
             bg.moveTo(sx - 4, sy);
             bg.lineTo(sx + 4, sy);
             bg.moveTo(sx, sy - 4);
             bg.lineTo(sx, sy + 4);
+            bg.circle(sx, sy, 9);
         }
         bg.stroke({ width: 1, color: this.theme.secondary, alpha: 0.8 });
     }
@@ -217,14 +231,13 @@ export class OrbitPlugin {
 
             g.circle(satX, satY, 18).stroke({ width: 1, color: this.theme.primary, alpha: 0.45 });
             if (s === 0) {
-                // Optical/SAR target crop reticle around primary satellite
                 g.rect(satX - 11, satY - 11, 22, 22).stroke({
                     width: 1,
-                    color: this.theme.peak,
-                    alpha: 0.7
+                    color: this.theme.primary,
+                    alpha: 0.75
                 });
             }
-            g.rect(satX - 3, satY - 3, 6, 6).fill(this.theme.peak);
+            g.rect(satX - 3, satY - 3, 6, 6).fill(this.theme.primary);
 
             sat.label.x = Math.min(this.width - 98, Math.max(6, satX + 10));
             sat.label.y = Math.min(this.height - 52, Math.max(42, satY - 10));

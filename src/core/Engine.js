@@ -137,6 +137,9 @@ export class Engine {
             case 'KeyT':
                 this.cycleTheme();
                 break;
+            case 'KeyM':
+                this.toggleColorMode();
+                break;
             case 'KeyE':
                 this.toggleErrorSimulation();
                 break;
@@ -199,6 +202,10 @@ export class Engine {
         }
         if (params.has('theme')) {
             global.theme = params.get('theme');
+        }
+        if (params.has('mode')) {
+            const mode = params.get('mode').toLowerCase();
+            global.colorMode = mode === 'color' ? 'color' : 'mono';
         }
         if (params.has('crt')) {
             const crtParam = params.get('crt').toLowerCase();
@@ -328,7 +335,13 @@ export class Engine {
     }
 
     cycleTheme() {
-        const themes = Object.keys(this.configManager.config?.themes || { 'classic-green': {} });
+        const themes = Object.keys(
+            this.configManager.config?.themes || {
+                'classic-green': {},
+                amber: {},
+                'light-grey': {}
+            }
+        );
         if (themes.length === 0) return;
         const global = this.configManager.getGlobal();
         const currentIdx = themes.indexOf(global.theme || 'classic-green');
@@ -336,7 +349,17 @@ export class Engine {
         global.theme = nextTheme;
         this.configManager.save();
         this.activateCurrentView();
-        this.showToast(`THEME: ${nextTheme.toUpperCase()}`);
+        this.showToast(`PHOSPHOR THEME: ${nextTheme.toUpperCase()}`);
+    }
+
+    toggleColorMode() {
+        const global = this.configManager.getGlobal();
+        global.colorMode = (global.colorMode || 'mono') === 'mono' ? 'color' : 'mono';
+        this.configManager.save();
+        this.activateCurrentView();
+        this.showToast(
+            `RENDERING MODE: ${global.colorMode === 'mono' ? 'MONO (BOLD / SINGLE PHOSPHOR)' : 'COLOR (MULTI-TONE ANSI)'}`
+        );
     }
 
     toggleErrorSimulation() {
@@ -421,12 +444,13 @@ export class Engine {
                 : 'STRETCH FILL';
 
         const crtLabel = this.crtFilter?.currentPreset?.label || 'SHARP CRT';
+        const colorModeStr = (global.colorMode || 'mono') === 'mono' ? 'MONO (BOLD/DIM)' : 'COLOR (MULTI-TONE)';
 
         const lines = [
             'HOLLYWOOD_OS 2 // OPERATOR HUD & KEYMAP',
             '',
             `ACTIVE VIEW  : ${(this.harnessPluginName ? `HARNESS (${this.harnessPluginName})` : this.currentPresetName).toUpperCase()}`,
-            `COLOR THEME  : ${(global.theme || 'classic-green').toUpperCase()}`,
+            `PHOSPHOR     : ${(global.theme || 'classic-green').toUpperCase()} // ${colorModeStr}`,
             `SCALING MODE : ${modeStr}`,
             `CRT DISPLAY  : ${crtLabel}`,
             `PRNG SEED    : ${global.seed || 'HOLLYWOOD-2026'}`,
@@ -434,8 +458,8 @@ export class Engine {
             '[1] Default 6-Win   [2] Minimal Matrix',
             '[3] Debug Lab       [4] Tactical Map Deck',
             '[5] Cyber Ops Deck  [Click Win] Maximize/Restore',
-            '[T] Cycle Theme     [C] Cycle 5 CRT Display Modes',
-            '[S] Scaling Mode    [I] Integer-Snap Retro',
+            '[T] Green/Amber/Grey[M] Toggle Mono / Color Mode',
+            '[C] Cycle 5 CRT Mode[S / I] Scaling / Integer Snap',
             '[E] Simulate Fault  [R] System Reboot',
             '[X] Export JSON     [O] Import JSON Config',
             '[H / ? / ESC] Close HUD'
