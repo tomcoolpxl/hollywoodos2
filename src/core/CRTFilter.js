@@ -179,11 +179,11 @@ export class CRTFilter extends Filter {
 
         const crtUniforms = new UniformGroup({
             uTime: { value: 0.0, type: 'f32' },
-            uSoftness: { value: options.softness ?? 0.75, type: 'f32' },
-            uScanlineIntensity: { value: options.scanlineIntensity ?? 0.20, type: 'f32' },
-            uChromaticAberration: { value: options.chromaticAberration ?? 0.42, type: 'f32' },
-            uVignette: { value: options.vignette ?? 0.16, type: 'f32' },
-            uNoise: { value: options.noise ?? 0.018, type: 'f32' }
+            uSoftness: { value: options.softness ?? 0.15, type: 'f32' },
+            uScanlineIntensity: { value: options.scanlineIntensity ?? 0.14, type: 'f32' },
+            uChromaticAberration: { value: options.chromaticAberration ?? 0.18, type: 'f32' },
+            uVignette: { value: options.vignette ?? 0.12, type: 'f32' },
+            uNoise: { value: options.noise ?? 0.012, type: 'f32' }
         });
 
         super({
@@ -195,14 +195,14 @@ export class CRTFilter extends Filter {
             }
         });
 
-        this.currentPreset = CRT_PRESETS[2]; // default: 'soft_phosphor'
-        this.applyPreset(options.preset || 'soft_phosphor');
+        this.currentPreset = CRT_PRESETS[1]; // default: 'sharp_crt'
+        this.applyPreset(options.preset || 'sharp_crt');
     }
 
     applyPreset(presetId) {
         const preset =
             CRT_PRESETS.find((p) => p.id === presetId) ||
-            CRT_PRESETS[2]; // fallback to 'soft_phosphor'
+            CRT_PRESETS[1]; // fallback to 'sharp_crt'
         this.currentPreset = preset;
 
         const u = this.resources.crtUniforms.uniforms;

@@ -90,7 +90,7 @@ export class Engine {
         try {
             const global = this.configManager.getGlobal();
             const initialMode =
-                global.crtMode || (global.crtEnabled === false ? 'super_crisp' : 'soft_phosphor');
+                global.crtMode || (global.crtEnabled === false ? 'super_crisp' : 'sharp_crt');
             this.crtFilter = new CRTFilter({ preset: initialMode });
             this.applyCRTMode(initialMode, false);
         } catch (e) {
@@ -207,7 +207,7 @@ export class Engine {
             } else if (CRT_PRESETS.some((p) => p.id === crtParam)) {
                 this.applyCRTMode(crtParam, false);
             } else {
-                this.applyCRTMode('soft_phosphor', false);
+                this.applyCRTMode('sharp_crt', false);
             }
         }
         if (params.has('preset')) {
@@ -317,7 +317,7 @@ export class Engine {
     toggleCRT() {
         if (!this.crtFilter) return;
         const global = this.configManager.getGlobal();
-        const currentId = global.crtMode || this.crtFilter.currentPreset?.id || 'soft_phosphor';
+        const currentId = global.crtMode || this.crtFilter.currentPreset?.id || 'sharp_crt';
         const idx = CRT_PRESETS.findIndex((p) => p.id === currentId);
         const nextIdx = (idx + 1) % CRT_PRESETS.length;
         const nextPreset = this.applyCRTMode(CRT_PRESETS[nextIdx].id, true);
@@ -420,7 +420,7 @@ export class Engine {
                 ? 'LETTERBOX'
                 : 'STRETCH FILL';
 
-        const crtLabel = this.crtFilter?.currentPreset?.label || 'SOFT PHOSPHOR';
+        const crtLabel = this.crtFilter?.currentPreset?.label || 'SHARP CRT';
 
         const lines = [
             'HOLLYWOOD_OS 2 // OPERATOR HUD & KEYMAP',
@@ -487,7 +487,7 @@ export class Engine {
             this.rng.reset(global.seed || 'HOLLYWOOD-2026');
             if (this.crtFilter) {
                 const mode =
-                    global.crtMode || (global.crtEnabled === false ? 'super_crisp' : 'soft_phosphor');
+                    global.crtMode || (global.crtEnabled === false ? 'super_crisp' : 'sharp_crt');
                 this.applyCRTMode(mode, false);
             }
             this.handleResize();
