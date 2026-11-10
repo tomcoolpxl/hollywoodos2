@@ -1,42 +1,16 @@
-import { BitmapFont, BitmapText, Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { BlurFilter, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { gsap } from 'gsap';
 
-const FONT_NAME = 'HollywoodMono';
 const CHAR_WIDTH_CACHE = new Map();
-let fontsInstalled = false;
-let bitmapFontReady = false;
 
-/**
- * Installs crisp monospace bitmap font atlases for PixiJS v8 so text updates
- * have near-zero GPU overhead and deterministic character cell metrics.
- */
 export function ensureBitmapFontsInstalled() {
-    if (fontsInstalled) return;
-    fontsInstalled = true;
+    // High-DPI crisp canvas Text is used for 4K sharpness; retained for API compatibility.
+}
 
-    const katakanaRange = [String.fromCharCode(0x30A0), String.fromCharCode(0x30FF)];
-    const chars = [
-        [' ', '~'],
-        katakanaRange,
-        '│─┌┐└┘█▓▒░'
-    ];
-
-    try {
-        BitmapFont.install({
-            name: FONT_NAME,
-            style: {
-                fontFamily: 'Consolas, "Courier New", monospace',
-                fontSize: 28,
-                fill: '#ffffff'
-            },
-            chars,
-            resolution: 2
-        });
-        bitmapFontReady = true;
-    } catch (e) {
-        console.warn('BitmapFont install fallback:', e);
-        bitmapFontReady = false;
-    }
+function getHighDpiResolution() {
+    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    // Render text at 2.5x–3x resolution so scaling 1600x900 up to 3840x2160 (4K) stays razor-sharp
+    return Math.min(4, Math.max(2.5, dpr * 2));
 }
 
 /**
@@ -46,7 +20,6 @@ export function getMonoCharWidth(fontSize = 14) {
     if (CHAR_WIDTH_CACHE.has(fontSize)) {
         return CHAR_WIDTH_CACHE.get(fontSize);
     }
-    ensureBitmapFontsInstalled();
     let width = fontSize * 0.6;
     try {
         const sample = createRetroText('MMMMMMMMMM', { fontSize, fill: 0xffffff });
@@ -62,34 +35,14 @@ export function getMonoCharWidth(fontSize = 14) {
 }
 
 /**
- * Creates a fast BitmapText (with automatic fallback to Text if needed).
+ * Creates a crisp, high-DPI monospace Text object optimized for 4K displays.
  */
 export function createRetroText(text = '', options = {}) {
-    ensureBitmapFontsInstalled();
     const fontSize = options.fontSize ?? 14;
     const fill = options.fill ?? 0x00FF00;
     const lineHeight = options.lineHeight ?? Math.round(fontSize * 1.2);
     const wordWrap = options.wordWrap ?? false;
     const wordWrapWidth = options.wordWrapWidth ?? 400;
-
-    if (bitmapFontReady) {
-        try {
-            const bmp = new BitmapText({
-                text,
-                style: {
-                    fontFamily: FONT_NAME,
-                    fontSize,
-                    fill,
-                    lineHeight,
-                    wordWrap,
-                    wordWrapWidth
-                }
-            });
-            return bmp;
-        } catch {
-            // Fall through to standard Text
-        }
-    }
 
     const style = new TextStyle({
         fontFamily: 'Consolas, "Courier New", monospace',
@@ -99,7 +52,14 @@ export function createRetroText(text = '', options = {}) {
         wordWrap,
         wordWrapWidth
     });
-    return new Text({ text, style });
+
+    const txt = new Text({
+        text,
+        style,
+        resolution: getHighDpiResolution(),
+        roundPixels: true
+    });
+    return txt;
 }
 
 const ANSI_TAG_REGEX = /\{(primary|secondary|dim|peak|error|inverse)\}([\s\S]*?)\{\/\}/g;
@@ -146,7 +106,7 @@ export function parseFakeAnsiLine(line) {
 }
 
 /**
- * GridAdapter: Provides terminal-style character grid addressing, fast BitmapText
+ * GridAdapter: Provides terminal-style character grid addressing, crisp 4K Text
  * rendering, Fake ANSI multi-color / inverse span overlays, cursor positioning,
  * and GSAP scroll animations.
  */
@@ -244,8 +204,8 @@ export class GridAdapter {
                 spanTextObj.visible = true;
                 spanTextObj.text = span.text;
                 spanTextObj.style.fill = this.resolveTagColor(span.tag);
-                spanTextObj.x = x;
-                spanTextObj.y = y;
+                spanTextObj.x = Math.round(x);
+                spanTextObj.y = Math.round(y);
                 activeSpans++;
             }
         }
@@ -294,20 +254,36 @@ export class GridAdapter {
 }
 
 /**
- * FreeformAdapter: Provides safe PixiJS v8 build-then-style 2D primitives and overlays.
- * Prevents the common PixiJS v7->v8 bug of calling .stroke()/.fill() before building paths.
+ * FreeformAdapter: Separates `vectorContainer` (graphics with subtle analog CRT blur/softness)
+ * from `uiContainer` (crisp 4K text labels).
  */
 export class FreeformAdapter {
     constructor(container, width, height) {
         this.container = container;
         this.width = width;
         this.height = height;
+
+        this.vectorContainer = new Container();
         this.bgGraphics = new Graphics();
         this.graphics = new Graphics();
         this.uiContainer = new Container();
 
-        this.container.addChild(this.bgGraphics);
-        this.container.addChild(this.graphics);
+        this.vectorContainer.addChild(this.bgGraphics);
+        this.vectorContainer.addChild(this.graphics);
+
+        // Apply subtle analog phosphor softness to vector graphics while keeping text labels crisp
+        try {
+            const vectorBlur = new BlurFilter({
+                strength: 1.15,
+                quality: 2,
+                resolution: 'inherit'
+            });
+            this.vectorContainer.filters = [vectorBlur];
+        } catch {
+            // Fallback if filter unavailable in headless mock
+        }
+
+        this.container.addChild(this.vectorContainer);
         this.container.addChild(this.uiContainer);
     }
 
@@ -359,8 +335,8 @@ export class FreeformAdapter {
 
     createLabel(text = '', options = {}) {
         const lbl = createRetroText(text, options);
-        if (options.x !== undefined) lbl.x = options.x;
-        if (options.y !== undefined) lbl.y = options.y;
+        if (options.x !== undefined) lbl.x = Math.round(options.x);
+        if (options.y !== undefined) lbl.y = Math.round(options.y);
         if (options.anchorX !== undefined || options.anchorY !== undefined) {
             lbl.anchor?.set(options.anchorX ?? 0, options.anchorY ?? 0);
         }

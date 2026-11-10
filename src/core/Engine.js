@@ -38,10 +38,14 @@ export class Engine {
     async init(containerId) {
         this.app = new Application();
 
+        const dpr = Math.min(window.devicePixelRatio || 1, 3);
         await this.app.init({
             resizeTo: window,
             backgroundColor: 0x050505,
             antialias: true,
+            resolution: dpr,
+            autoDensity: true,
+            roundPixels: true,
             preference: 'webgl',
             powerPreference: 'default'
         });

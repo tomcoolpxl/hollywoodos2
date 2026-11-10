@@ -54,7 +54,7 @@ void main(void)
 {
     vec2 sampleUV = clamp(vTextureCoord, uInputClamp.xy, uInputClamp.zw);
 
-    // Subtle RGB chromatic shift
+    // Very subtle RGB chromatic shift so 4K text remains crisp
     vec2 shift = vec2(uChromaticAberration * uInputSize.z, 0.0);
     float r = texture(uTexture, clamp(sampleUV + shift, uInputClamp.xy, uInputClamp.zw)).r;
     float g = texture(uTexture, sampleUV).g;
@@ -62,8 +62,8 @@ void main(void)
     float a = texture(uTexture, sampleUV).a;
     vec3 col = vec3(r, g, b);
 
-    // Scanline effect
-    float scanWave = sin(gl_FragCoord.y * 3.14159265 + uTime * 2.0);
+    // Subtle scanline modulation
+    float scanWave = sin(gl_FragCoord.y * 3.14159265 + uTime * 1.5);
     float scanFactor = 1.0 - uScanlineIntensity * (0.5 - 0.5 * scanWave);
     col *= scanFactor;
 
@@ -93,15 +93,17 @@ export class CRTFilter extends Filter {
 
         const crtUniforms = new UniformGroup({
             uTime: { value: 0.0, type: 'f32' },
-            uCurvature: { value: options.curvature ?? 0.25, type: 'f32' },
-            uScanlineIntensity: { value: options.scanlineIntensity ?? 0.2, type: 'f32' },
-            uChromaticAberration: { value: options.chromaticAberration ?? 0.6, type: 'f32' },
-            uVignette: { value: options.vignette ?? 0.14, type: 'f32' },
-            uNoise: { value: options.noise ?? 0.02, type: 'f32' }
+            uCurvature: { value: options.curvature ?? 0.15, type: 'f32' },
+            uScanlineIntensity: { value: options.scanlineIntensity ?? 0.14, type: 'f32' },
+            uChromaticAberration: { value: options.chromaticAberration ?? 0.18, type: 'f32' },
+            uVignette: { value: options.vignette ?? 0.12, type: 'f32' },
+            uNoise: { value: options.noise ?? 0.015, type: 'f32' }
         });
 
         super({
             glProgram,
+            resolution: 'inherit',
+            antialias: 'inherit',
             resources: {
                 crtUniforms
             }

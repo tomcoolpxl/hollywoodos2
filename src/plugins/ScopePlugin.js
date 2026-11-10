@@ -10,7 +10,7 @@ export class ScopePlugin {
         this.mode = 'wave'; // 'wave' | 'lissajous'
         this.freqA = 3.0;
         this.freqB = 2.0;
-        this.noiseAmp = 0.04;
+        this.noiseAmp = 0.01;
         this.readoutTimer = 0;
         this.labels = [];
     }
@@ -83,11 +83,11 @@ export class ScopePlugin {
     }
 
     update(dt) {
-        this.phase += dt * 4.5;
+        this.phase += dt * 0.8;
         this.modeTimer += dt;
         this.readoutTimer += dt;
 
-        if (this.modeTimer >= 5.0) {
+        if (this.modeTimer >= 10.0) {
             this.modeTimer = 0;
             this.mode = this.mode === 'wave' ? 'lissajous' : 'wave';
             this.freqA = 2 + this.rng.int(0, 4);

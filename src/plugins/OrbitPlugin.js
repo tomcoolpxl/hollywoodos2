@@ -25,9 +25,9 @@ export class OrbitPlugin {
         this.drawWorldGrid();
 
         const satDefs = [
-            { name: 'KH-12 KEYHOLE', amp: 0.36, freq: 1.0, speed: 0.08, phase: 0.2 },
-            { name: 'LACROSSE-5', amp: 0.28, freq: 1.5, speed: 0.11, phase: 2.1 },
-            { name: 'ORION-SIGINT', amp: 0.41, freq: 2.0, speed: 0.06, phase: 4.0 }
+            { name: 'KH-12 KEYHOLE', amp: 0.36, freq: 1.0, speed: 0.011, phase: 0.2 },
+            { name: 'LACROSSE-5', amp: 0.28, freq: 1.5, speed: 0.015, phase: 2.1 },
+            { name: 'ORION-SIGINT', amp: 0.41, freq: 2.0, speed: 0.0085, phase: 4.0 }
         ];
 
         this.satellites = satDefs.map((def) => {
